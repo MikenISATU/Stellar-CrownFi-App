@@ -1,0 +1,12 @@
+{
+  "name": "Isabel Reyes — Official Portrait",
+  "description": "Official CrownFi collectible for Isabel Reyes, delegate of the Philippines. One-of-a-kind on Stellar.",
+  "image": "https://scarlet-permanent-pike-885.mypinata.cloud/ipfs/bafkreieqmzacbcl5llrmhoanln4zqpq5l5ucrnk4tmnnohizcodgi57bui",
+  "attributes": [
+    { "trait_type": "Delegate", "value": "Isabel Reyes" },
+    { "trait_type": "Country", "value": "Philippines" },
+    { "trait_type": "Sash", "value": "PH" },
+    { "trait_type": "Candidate", "value": "2" },
+    { "trait_type": "Pageant", "value": "Miss Universe 2026" }
+  ]
+}

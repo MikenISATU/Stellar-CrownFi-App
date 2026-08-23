@@ -1,0 +1,12 @@
+{
+  "name": "Ratana Somsri — Official Portrait",
+  "description": "Official CrownFi collectible for Ratana Somsri, delegate of Thailand. One-of-a-kind on Stellar.",
+  "image": "https://scarlet-permanent-pike-885.mypinata.cloud/ipfs/bafkreictdokkywrr2ayj4g6q2eodm25kspkqmhp5x6uu6sboizw7rxdmwy",
+  "attributes": [
+    { "trait_type": "Delegate", "value": "Ratana Somsri" },
+    { "trait_type": "Country", "value": "Thailand" },
+    { "trait_type": "Sash", "value": "TH" },
+    { "trait_type": "Candidate", "value": "5" },
+    { "trait_type": "Pageant", "value": "Miss Universe 2026" }
+  ]
+}

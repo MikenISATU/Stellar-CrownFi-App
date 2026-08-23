@@ -1,0 +1,12 @@
+{
+  "name": "Ayu Lestari — Official Portrait",
+  "description": "Official CrownFi collectible for Ayu Lestari, delegate of Indonesia. One-of-a-kind on Stellar.",
+  "image": "https://scarlet-permanent-pike-885.mypinata.cloud/ipfs/bafkreicqhhqqtwjayy3ouz7g23qfk4jk7xcja2ygknctul7c4eubbpmzxm",
+  "attributes": [
+    { "trait_type": "Delegate", "value": "Ayu Lestari" },
+    { "trait_type": "Country", "value": "Indonesia" },
+    { "trait_type": "Sash", "value": "ID" },
+    { "trait_type": "Candidate", "value": "1" },
+    { "trait_type": "Pageant", "value": "Miss Universe 2026" }
+  ]
+}

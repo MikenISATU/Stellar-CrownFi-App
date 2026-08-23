@@ -1,0 +1,427 @@
+// CrownFi data model (MVP).
+// Database: Supabase Postgres. Set DATABASE_URL (pooled) + DIRECT_URL (direct) in web/.env.
+// One-time setup instructions: see SUPABASE.md in the repo root.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")   // Supabase pooled (6543, ?pgbouncer=true)
+  directUrl = env("DIRECT_URL")     // Supabase direct (5432) for migrations
+}
+
+model Fan {
+  id                 String               @id @default(cuid())
+  handle             String               @unique
+  email              String?              @unique
+  walletAddress      String?              @unique
+  points             Int                  @default(0)
+  // Anti-abuse: sha256(ip + secret) captured at registration to cap accounts per network.
+  registrationIpHash String?
+  // Identity verification for the money-out path. none | pending | verified | rejected
+  kycStatus          String               @default("none")
+  // Onboarding provenance: freighter | privy | mock
+  authProvider       String               @default("freighter")
+  createdAt          DateTime             @default(now())
+  votes              Vote[]
+  tickets            Ticket[]
+  purchases          Purchase[]
+  loyaltyTx          LoyaltyTransaction[]
+  taskCompletions    TaskCompletion[]
+  redemptions        Redemption[]
+
+  @@index([registrationIpHash])
+}
+
+// Append-only points ledger. Every earn (+) or spend (-) writes a row alongside the
+// Fan.points balance update, so the balance is always auditable.
+model LoyaltyTransaction {
+  id        String   @id @default(cuid())
+  fan       Fan      @relation(fields: [fanId], references: [id])
+  fanId     String
+  delta     Int      // + earn / - spend
+  reason    String   // "vote" | "collectible" | "task:<key>" | "redeem:<key>"
+  createdAt DateTime @default(now())
+
+  @@index([fanId])
+}
+
+// A social task a fan can complete to earn points (follow, join Discord, share, etc.).
+model SocialTask {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  title       String
+  description String
+  points      Int
+  actionUrl   String?
+  icon        String?
+  active      Boolean          @default(true)
+  order       Int              @default(0)
+  createdAt   DateTime         @default(now())
+  completions TaskCompletion[]
+}
+
+model TaskCompletion {
+  id        String     @id @default(cuid())
+  fan       Fan        @relation(fields: [fanId], references: [id])
+  fanId     String
+  task      SocialTask @relation(fields: [taskId], references: [id])
+  taskId    String
+  createdAt DateTime   @default(now())
+
+  @@unique([fanId, taskId]) // one completion per task per fan
+  @@index([fanId])
+}
+
+// A redeemable item in the loyalty shop.
+model Reward {
+  id          String       @id @default(cuid())
+  key         String       @unique
+  title       String
+  description String
+  cost        Int          // points
+  stock       Int?         // null = unlimited
+  icon        String?
+  active      Boolean      @default(true)
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now())
+  redemptions Redemption[]
+}
+
+model Redemption {
+  id        String   @id @default(cuid())
+  fan       Fan      @relation(fields: [fanId], references: [id])
+  fanId     String
+  reward    Reward   @relation(fields: [rewardId], references: [id])
+  rewardId  String
+  cost      Int
+  code      String
+  status    String   @default("fulfilled") // fulfilled | pending
+  createdAt DateTime @default(now())
+
+  @@index([fanId])
+}
+
+model Contestant {
+  id           String        @id @default(cuid())
+  name         String
+  country      String
+  sash         String        @unique
+  portraitUrl  String?
+  createdAt    DateTime      @default(now())
+  votes        Vote[]
+  collectibles Collectible[]
+}
+
+model VotingRound {
+  id         String       @id @default(cuid())
+  title      String
+  category   String? // pageant segment: swimsuit | long_gown | qa | overall (null = general)
+  status     String       @default("open") // open | closed
+  openedAt   DateTime     @default(now())
+  closedAt   DateTime?
+  votes      Vote[]
+  checkpoint Checkpoint?
+}
+
+// One vote per fan per round is enforced by the unique constraint below (dedup at the DB layer).
+model Vote {
+  id           String      @id @default(cuid())
+  round        VotingRound @relation(fields: [roundId], references: [id])
+  roundId      String
+  fan          Fan         @relation(fields: [fanId], references: [id])
+  fanId        String
+  contestant   Contestant  @relation(fields: [contestantId], references: [id])
+  contestantId String
+  leafHash     String      // sha256(fanId|contestantId|roundId)
+  createdAt    DateTime    @default(now())
+
+  @@unique([roundId, fanId]) // duplicate-vote prevention
+  @@index([roundId])
+}
+
+// On-chain proof for a closed round. In live mode, anchorTx is the real Stellar transaction hash.
+model Checkpoint {
+  id         String      @id @default(cuid())
+  round      VotingRound @relation(fields: [roundId], references: [id])
+  roundId    String      @unique
+  merkleRoot String
+  tallyHash  String
+  totalVotes Int
+  anchorTx   String?     // Stellar tx hash (or mock)
+  tallyJson  String      // aggregated results snapshot
+  leavesJson String      // ordered leaf hashes, for proof generation
+  createdAt  DateTime    @default(now())
+}
+
+model Ticket {
+  id        String   @id @default(cuid())
+  fan       Fan      @relation(fields: [fanId], references: [id])
+  fanId     String
+  eventName String
+  tier      String
+  seat      String
+  priceUsdc Float
+  tokenId   String?  // on-chain NFT token id (or mock)
+  mintTx    String?  // Stellar tx hash (or mock)
+  status    String   @default("minted")
+  createdAt DateTime @default(now())
+}
+
+// Catalog item: a contestant's collectible portrait edition.
+model Collectible {
+  id           String     @id @default(cuid())
+  contestant   Contestant @relation(fields: [contestantId], references: [id])
+  contestantId String
+  title        String
+  metadataUri  String     // ipfs://...
+  imageUrl     String?    // resolved NFT art (from the metadata's image field) for in-app display
+  priceUsdc    Float
+  edition      Int
+  candidateId  Int?       // pageant-nft on-chain candidate id (1..N) this collectible mints
+  listingId    Int?       @unique // sale-splitter listing id (set when registered on-chain)
+  createdAt    DateTime   @default(now())
+  purchases    Purchase[]
+}
+
+// A fan's purchase of a collectible (records ownership + the minted token).
+model Purchase {
+  id            String      @id @default(cuid())
+  fan           Fan         @relation(fields: [fanId], references: [id])
+  fanId         String
+  collectible   Collectible @relation(fields: [collectibleId], references: [id])
+  collectibleId String
+  priceUsdc     Float
+  tokenId       String?
+  mintTx        String?
+  createdAt     DateTime    @default(now())
+
+  @@unique([fanId, collectibleId]) // one collectible per fan (anti points-farming); run `prisma migrate dev`
+  @@index([fanId])
+}
+
+// An application from a pageant organizer to run their event on CrownFi.
+// Admin reviews and approves before the organizer gets create access.
+model OrganizerRequest {
+  id          String   @id @default(cuid())
+  orgName     String
+  contactName String
+  email       String
+  pageantName String
+  country     String
+  message     String?
+  status      String   @default("pending") // pending | approved | rejected
+  createdAt   DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 1 — Multi-pageant platform (organizer submissions + approval workflow)
+//
+// A Pageant is an organizer-submitted event that moves through an approval
+// workflow. On approval it is published and (Phase 2) gets an NFT contract.
+// Statuses: draft | submitted | in_review | requires_changes | approved | rejected
+// ─────────────────────────────────────────────────────────────────────────────
+model Pageant {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  ownerFanId    String? // the organizer (connected wallet) who created it
+
+  // Organizer info
+  orgName       String
+  contactName   String
+  email         String
+  website       String?
+  facebook      String?
+  instagram     String?
+  socials       String? // other social links (freeform / comma-separated)
+  verification  String? // supporting verification links
+  driveUrl      String? // Google Drive folder holding the required files (permits, roster, hi-res photos)
+
+  // Event info
+  title         String
+  description   String?
+  eventDate     DateTime?
+  venue         String?
+  bannerUrl     String?
+
+  // Approval workflow
+  status        String   @default("draft")
+  reviewNote    String? // admin feedback for requires_changes / rejected
+
+  // On-chain (set at Phase 2 deploy time)
+  nftContractId String?
+  published     Boolean  @default(false)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  candidates    Candidate[]
+  categories    PageantCategory[]
+
+  @@index([status])
+  @@index([ownerFanId])
+}
+
+// Global competition categories (Swimsuit, Long Gown, …). Extensible: add a row,
+// no code change. `key` is the stable slug used by candidate images + prediction markets.
+model Category {
+  id       String            @id @default(cuid())
+  key      String            @unique // "swimsuit", "long_gown", …
+  name     String
+  order    Int               @default(0)
+  active   Boolean           @default(true)
+  pageants PageantCategory[]
+}
+
+// Which categories a given pageant runs.
+model PageantCategory {
+  id         String   @id @default(cuid())
+  pageant    Pageant  @relation(fields: [pageantId], references: [id], onDelete: Cascade)
+  pageantId  String
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId String
+
+  @@unique([pageantId, categoryId])
+  @@index([pageantId])
+}
+
+model Candidate {
+  id            String   @id @default(cuid())
+  pageant       Pageant  @relation(fields: [pageantId], references: [id], onDelete: Cascade)
+  pageantId     String
+  fullName      String
+  number        Int?
+  bio           String?
+  age           Int?
+  location      String? // municipality / city / province / represented location
+  profileUrl    String?
+  nftArtworkUrl String? // dedicated collectible artwork (NOT a competition photo)
+  maxSupply     Int      @default(100) // per-candidate NFT supply cap
+  createdAt     DateTime @default(now())
+
+  images        CandidateImage[]
+
+  @@index([pageantId])
+}
+
+// Per-category candidate images (profile | swimsuit | long_gown | nft_artwork | …).
+// Extensible: new categoryKey, no schema change.
+model CandidateImage {
+  id          String    @id @default(cuid())
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId String
+  categoryKey String
+  url         String
+
+  @@unique([candidateId, categoryKey])
+  @@index([candidateId])
+}
+
+// Supabase keep-alive heartbeat (created via the SQL editor + pg_cron). Registered
+// here only so `prisma db push` never drops it. See docs/setup/supabase-keepalive.sql.
+model Keepalive {
+  id       Int      @id @default(1)
+  lastPing DateTime @default(now()) @map("last_ping") @db.Timestamptz(6)
+
+  @@map("keepalive")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 3 — Payment & KYC settings (single admin-editable config row) + logs.
+// ─────────────────────────────────────────────────────────────────────────────
+model PlatformSettings {
+  id              String   @id @default("singleton")
+  paymentsEnabled Boolean  @default(true)
+  kycEnabled      Boolean  @default(false) // is KYC verification switched on at all
+  kycMandatory    Boolean  @default(false) // if enabled, required (vs optional prompt) for paid actions
+  environment     String   @default("testnet") // testnet | production
+  activeProvider  String   @default("testnet_usdc")
+  maintenanceMode Boolean  @default(false)
+  winnersAnnounced Boolean @default(false) // coronation switch: reveals /winners to the public
+  providerConfig  String? // JSON blob for the active provider's non-secret config
+  updatedAt       DateTime @updatedAt
+}
+
+// Payment attempts (mint / ticket / vote / premium), for the admin monitor.
+model PaymentLog {
+  id        String   @id @default(cuid())
+  fanId     String?
+  kind      String // mint | ticket | vote | premium
+  provider  String
+  amount    Float
+  currency  String // USDC | PHP | USD | …
+  status    String // success | failed | pending
+  reference String? // provider tx id / stellar tx hash
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// KYC verification events, for the admin monitor + audit.
+model KycLog {
+  id        String   @id @default(cuid())
+  fanId     String?
+  provider  String
+  status    String // started | pending | verified | rejected
+  reference String?
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 4 — Prediction markets (mirror of on-chain state so users browse w/o a wallet).
+// Settlement lives in the prediction-market Soroban contract; this is the app's view + intake.
+// ─────────────────────────────────────────────────────────────────────────────
+// Uploaded images (market banners, candidate photos). Stored in Postgres and served via
+// /api/images/[id] — the filesystem is read-only on serverless, so disk writes are not an option.
+model StoredImage {
+  id        String   @id @default(cuid())
+  mime      String
+  bytes     Bytes
+  createdAt DateTime @default(now())
+}
+
+model PredictionMarket {
+  id            String   @id @default(cuid())
+  pageantId     String? // optional link to a Pageant
+  creatorFanId  String? // null = official (admin/platform); set = community/user-created
+  category      String // swimsuit | long_gown | overall | talent | costume
+  question      String
+  optionsJson   String // JSON array of option labels
+  optionFlagsJson String? // optional JSON array of ISO-2 country codes aligned to optionsJson
+  status        String   @default("open") // open | closed | resolved | cancelled
+  closeTime     DateTime
+  winningOption Int?
+  bannerUrl     String?
+  chainMarketId Int? // on-chain market id (live mode)
+  createTxHash  String? // tx that created the market on-chain
+  resolveTxHash String? // tx that resolved/closed/cancelled it on-chain
+  createdAt     DateTime @default(now())
+
+  predictions Prediction[]
+
+  @@index([status])
+  @@index([category])
+  @@index([creatorFanId])
+}
+
+model Prediction {
+  id        String           @id @default(cuid())
+  market    PredictionMarket @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  marketId  String
+  fanId     String
+  option    Int
+  amount    Float
+  status    String           @default("active") // active | won | lost | claimed
+  txHash    String? // on-chain stake tx
+  claimTxHash String? // on-chain claim tx (payout)
+  createdAt DateTime         @default(now())
+
+  @@index([marketId])
+  @@index([fanId])
+}

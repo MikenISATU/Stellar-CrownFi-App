@@ -1,0 +1,20 @@
+export const TICKETING_COPY = {
+  heroEyebrow: "Coronation Night 2026",
+  heroTitle: "Fair tickets, on-chain",
+  heroDescription:
+    "Pay in USDC. Every ticket is minted on Stellar with your tier and seat — scannable at the door, impossible to duplicate.",
+  onChainTag: "on-chain",
+  testUsdcLabel: "Your test USDC",
+  testUsdcButton: "Get test USDC",
+  tierHeading: "1. Pick your tier",
+  bookingHeading: "2. Book your seat",
+  bookingDescription: "Connect Freighter to complete the purchase.",
+  connectToBuy: "Connect your Freighter wallet to buy.",
+  ticketsHeading: "Your tickets",
+  demoHeading: "Demo",
+  demoDescription: "Preview the",
+  voucherDemoLink: "voucher print layout",
+  verifyDemoLink: "check-in scanner",
+  successTitle: "Ticket purchased!",
+  successDescription: "Your voucher is ready — print it or save as PDF for the venue.",
+};

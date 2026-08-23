@@ -1,0 +1,38 @@
+import { NextRequest, NextResponse } from "next/server";
+import { buildBuyTx } from "@/lib/stellar";
+import { TICKET_TIERS, tierListingId } from "@/lib/tiers";
+import { createTxIntent } from "@/lib/txIntents";
+import { requireFan } from "@/lib/fanAuth";
+import { paymentsAllowed } from "@/lib/settings";
+
+const LIVE = (process.env.STELLAR_MODE ?? "mock") === "live";
+
+// STEP 1 of a USDC ticket purchase: return an unsigned tx for the buyer to sign in Freighter.
+export async function POST(req: NextRequest) {
+  const auth = requireFan(req);
+  if (auth instanceof NextResponse) return auth;
+
+  const pay = await paymentsAllowed();
+  if (!pay.ok) return NextResponse.json({ error: pay.reason }, { status: 403 });
+
+  const body = await req.json().catch(() => null);
+  const tier = String(body?.tier ?? "");
+  const buyerAddress = String(body?.buyerAddress ?? "").trim();
+
+  const listingId = tierListingId(tier);
+  if (listingId == null) return NextResponse.json({ error: "unknown_tier" }, { status: 400 });
+
+  if (!LIVE) return NextResponse.json({ mock: true });
+  if (!buyerAddress.startsWith("G")) return NextResponse.json({ error: "connect_wallet" }, { status: 400 });
+  // The buyer must be the signed-in wallet — no attributing a purchase to another fan.
+  if (buyerAddress !== auth.address) return NextResponse.json({ error: "address_mismatch" }, { status: 403 });
+
+  try {
+    const { xdr, txHash } = await buildBuyTx({ buyerAddress, listingId });
+    const intent = createTxIntent({ kind: "ticket-buy", fanId: auth.fanId, tier, listingId, expectedSource: buyerAddress, txHash });
+    return NextResponse.json({ xdr, intentId: intent.id, tier, priceUsdc: (TICKET_TIERS as any)[tier].priceUsdc, listingId });
+  } catch (e: any) {
+    console.error("[api/tickets/prepare-buy] failed:", e);
+    return NextResponse.json({ error: e?.message ?? "prepare_failed" }, { status: 500 });
+  }
+}

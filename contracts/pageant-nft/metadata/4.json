@@ -1,0 +1,12 @@
+{
+  "name": "Mai Tanaka — Official Portrait",
+  "description": "Official CrownFi collectible for Mai Tanaka, delegate of Japan. One-of-a-kind on Stellar.",
+  "image": "https://scarlet-permanent-pike-885.mypinata.cloud/ipfs/bafkreidjp2rjgcpfi7eabwxiaeu3ogbuep5rt5avkj2rfb5xrz2nf7j2ee",
+  "attributes": [
+    { "trait_type": "Delegate", "value": "Mai Tanaka" },
+    { "trait_type": "Country", "value": "Japan" },
+    { "trait_type": "Sash", "value": "JP" },
+    { "trait_type": "Candidate", "value": "4" },
+    { "trait_type": "Pageant", "value": "Miss Universe 2026" }
+  ]
+}

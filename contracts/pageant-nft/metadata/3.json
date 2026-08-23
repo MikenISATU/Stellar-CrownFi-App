@@ -1,0 +1,12 @@
+{
+  "name": "Linh Nguyen — Official Portrait",
+  "description": "Official CrownFi collectible for Linh Nguyen, delegate of Vietnam. One-of-a-kind on Stellar.",
+  "image": "https://scarlet-permanent-pike-885.mypinata.cloud/ipfs/bafkreifhxjumxbq5xgpdq3sjkhuimdwzy3dgn762urwy56ne6yqxlmsf2i",
+  "attributes": [
+    { "trait_type": "Delegate", "value": "Linh Nguyen" },
+    { "trait_type": "Country", "value": "Vietnam" },
+    { "trait_type": "Sash", "value": "VN" },
+    { "trait_type": "Candidate", "value": "3" },
+    { "trait_type": "Pageant", "value": "Miss Universe 2026" }
+  ]
+}

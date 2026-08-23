@@ -1,0 +1,16 @@
+[package]
+name = "pageant-nft"
+version = { workspace = true }
+edition = { workspace = true }
+
+# Reusable NFT template for pageant candidates. Self-contained on soroban-sdk (no OZ
+# crates) so it builds cleanly and every security property is auditable in one file.
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }

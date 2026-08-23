@@ -1,0 +1,357 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CrownFi light theme: white background, gold accent (matches the deck). */
+:root { color-scheme: light; }
+
+/* `clip` (not `hidden`) so full-bleed strips never open a horizontal scrollbar, while the
+   sticky header keeps working — `hidden` would make this a scroll container and break it. */
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; overflow-x: clip; }
+* { -webkit-tap-highlight-color: transparent; }
+/* Faster, cleaner taps on mobile for interactive elements. */
+button, a, [role="button"], summary, label { touch-action: manipulation; }
+
+body {
+  color: #23252f;
+  font-family: var(--font-sans), Inter, system-ui, sans-serif;
+  background:
+    radial-gradient(1100px 520px at 50% -12%, rgba(201,162,39,0.10), transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, #faf7ef 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  min-height: 100dvh;
+  /* Lets full-bleed strips (the collectibles carousel) run past the page container without
+     ever producing a horizontal scrollbar. `clip` rather than `hidden` — `hidden` would kill
+     the sticky header. */
+  overflow-x: clip;
+}
+
+/* Elegant display hierarchy for a serif face: a touch of tracking + tight leading. */
+.font-display { letter-spacing: -0.01em; }
+
+@layer components {
+  /* Card — hairline border + layered neutral shadow (crisp/premium, not warm-soft). */
+  .glass { @apply rounded-2xl border border-[#ece6d8] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_28px_-14px_rgba(16,24,40,0.12)]; }
+  .glass-hover { @apply transition duration-200 hover:-translate-y-0.5 hover:border-[#e3cf8f] hover:shadow-[0_2px_6px_rgba(16,24,40,0.05),0_20px_44px_-18px_rgba(184,145,47,0.30)]; }
+  /* Primary CTA — molten-gold rim that sweeps on hover, over a dark inner panel.
+     The rim is the element's own background; ::before is the panel, sitting between that
+     background and the label (negative z-index inside the button's own stacking context),
+     so the button's real text shows through instead of being baked into the CSS. */
+  .btn-gold {
+    @apply relative z-0 inline-flex min-h-[40px] items-center justify-center gap-2 overflow-hidden rounded-[10px] border-0 px-6 py-2.5 text-sm font-semibold tracking-wide disabled:pointer-events-none disabled:opacity-40;
+    color: #ffd277;
+    background: linear-gradient(to right, #77530a, #ffd277, #77530a, #77530a, #ffd277, #77530a);
+    background-size: 250%;
+    background-position: left;
+    transition: background-position 1s ease, transform 0.15s ease;
+  }
+  .btn-gold::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    left: 1.5%;
+    top: 5%;
+    width: 97%;
+    height: 90%;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.842);
+  }
+  .btn-gold:hover { background-position: right; }
+  .btn-gold:active { transform: scale(0.95); }
+  /* Secondary — solid white, hairline, gold on hover. */
+  .btn-ghost { @apply inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl border border-[#e4dfce] bg-white px-5 py-2.5 text-sm font-medium tracking-wide text-[#3a3f52] transition duration-150 hover:border-[#d4af37] hover:bg-[#faf7ef] active:translate-y-px disabled:opacity-40; }
+  .chip { @apply inline-flex items-center gap-1 rounded-full border border-[#ece6d8] bg-[#faf7ef] px-2.5 py-1 text-xs font-medium text-[#5f6172]; }
+
+  /* Panel form of the gold CTA — the same molten rim sweeping on hover, but a white face
+     instead of black, so boxes and buttons read as one family. Rim is a uniform 2px inset
+     rather than the button's percentages, which would go lopsided on a wide, short card. */
+  .card-gold {
+    @apply relative z-0 overflow-hidden rounded-xl border-0;
+    background: linear-gradient(to right, #77530a, #ffd277, #77530a, #77530a, #ffd277, #77530a);
+    background-size: 250%;
+    background-position: left;
+    transition: background-position 1s ease;
+  }
+  .card-gold::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 2px;
+    border-radius: 10px;
+    background-color: #ffffff;
+  }
+  .card-gold:hover { background-position: right; }
+  /* Selected/active variant — warm face instead of white so the chosen card reads at a glance. */
+  .card-gold-active::before { background-color: #fff8e6; }
+
+  /* Numbered step chip, in the gold-button treatment: gold rim, dark face, gold numeral. */
+  .num-gold {
+    @apply relative z-0 grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full text-xs font-semibold;
+    color: #ffd277;
+    background: linear-gradient(to right, #77530a, #ffd277, #77530a, #77530a, #ffd277, #77530a);
+    background-size: 250%;
+    background-position: left;
+    transition: background-position 1s ease;
+  }
+  .num-gold::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 2px;
+    border-radius: 9999px;
+    background-color: rgba(0, 0, 0, 0.842);
+  }
+  .num-gold:hover { background-position: right; }
+
+  /* Section label — same gold rim, pill sized. */
+  .eyebrow {
+    @apply relative z-0 inline-flex items-center overflow-hidden rounded-full px-3.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#a97f16];
+    background: linear-gradient(to right, #77530a, #ffd277, #77530a, #77530a, #ffd277, #77530a);
+    background-size: 250%;
+    background-position: left;
+    transition: background-position 1s ease;
+  }
+  .eyebrow::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 1.5px;
+    border-radius: 9999px;
+    background-color: #ffffff;
+  }
+  .eyebrow:hover { background-position: right; }
+  /* Input — touch-friendly height, crisp gold focus ring. */
+  .field { @apply w-full min-h-[44px] rounded-xl border border-[#e0dac9] bg-white px-3.5 py-2.5 text-sm text-[#23252f] placeholder-[#9a968b] outline-none transition duration-150 focus:border-[#d4af37] focus:ring-4 focus:ring-[#d4af37]/15; }
+  .tag-on { @apply inline-flex items-center gap-1 rounded-full bg-[#e6f6ef] px-2 py-0.5 text-[11px] font-semibold text-[#0f6e56]; }
+  .tag-off { @apply inline-flex items-center gap-1 rounded-full bg-[#f1eee4] px-2 py-0.5 text-[11px] font-semibold text-[#6b6552]; }
+  .surface-soft { @apply bg-[#faf7ef]; }
+}
+
+.mono { font-family: ui-monospace, "SF Mono", "JetBrains Mono", monospace; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Home delegates filmstrip ───────────────────────────────────────────────
+   Accordion carousel: the active card opens to full width while the others rest
+   as narrow strips, greyed back under a gold veil that slides away when a card
+   becomes active. Ported to the CrownFi gold palette. */
+.filmstrip { --fs-h: 28rem; --fs-w: 24rem; display: grid; }
+
+.filmstrip__list {
+  display: flex;
+  overflow: hidden;
+  list-style: none;
+  margin: 0;
+  padding: 1.5rem 0 2rem;
+  contain: layout;
+  isolation: isolate;
+}
+
+.filmstrip__item {
+  display: grid;
+  position: relative;
+  align-content: start;
+  margin: 0 6px;
+  padding: 0;
+  flex: 1 1 10%;
+  height: var(--fs-h);
+  overflow: hidden;
+  border-radius: 16px;
+  background: #f6eed6;
+  cursor: pointer;
+  transform: translate3d(0, 0, 0.1px);
+  box-shadow: rgba(35, 37, 47, 0.26) 0 3px 15px 2px, rgba(35, 37, 47, 0.12) 0 12px 28px 0,
+    rgba(184, 145, 47, 0.28) 0 0 0 1px inset;
+  contain: layout;
+  isolation: isolate;
+}
+.filmstrip__item,
+.filmstrip__item * { transition: all 0.6s cubic-bezier(0.55, 0.24, 0.18, 1); user-select: none; }
+.filmstrip__item:hover { flex-basis: calc(var(--fs-w) / 2); transition: all 0.3s ease; }
+.filmstrip__item[data-active] { flex-basis: var(--fs-w); flex-grow: 0; cursor: default; }
+
+.filmstrip__item img {
+  display: block;
+  position: absolute;
+  width: var(--fs-w);
+  height: 100%;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: -1;
+  object-fit: cover;
+  filter: saturate(0.25) contrast(0.85) brightness(1.05);
+}
+
+/* Gold veil over the resting cards — drops away on the active one. */
+.filmstrip__item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 1;
+  background: linear-gradient(160deg, rgba(35, 37, 47, 0) 35%, rgba(184, 145, 47, 0.5) 70%, rgba(255, 210, 119, 0.72) 100%);
+  transition: all 0.66s cubic-bezier(0.55, 0.24, 0.18, 1);
+}
+.filmstrip__item[data-active]::after { transform: translateY(100%); }
+.filmstrip__item[data-active],
+.filmstrip__item[data-active] * { opacity: 1; filter: none; }
+
+.filmstrip__contents {
+  display: flex;
+  flex-direction: column;
+  justify-content: start;
+  gap: 0.25rem;
+  width: var(--fs-w);
+  padding: 1em;
+  z-index: 2;
+  position: absolute;
+  inset: 0; /* span the card: name/country shade at the top, CTA pinned to the bottom shade */
+  background-image:
+    radial-gradient(ellipse at 0 0, rgba(20, 23, 42, 0.62) 20%, transparent 58%),
+    linear-gradient(to top, rgba(20, 23, 42, 0.55) 0%, transparent 26%);
+  background-size: 170% 220px, 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none; /* the card handles clicks; only the CTA link is interactive */
+}
+.filmstrip__contents > * { pointer-events: auto; }
+.filmstrip__name,
+.filmstrip__country {
+  margin: 0;
+  line-height: 1.1;
+  opacity: 0;
+  transform: translateX(-200px);
+  transition-duration: 1s;
+  max-width: 18em;
+}
+.filmstrip__name {
+  color: #fdf6e2;
+  font-size: 1.6em;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.filmstrip__country {
+  font-size: 0.78em;
+  letter-spacing: 1.2px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: transparent;
+  background: linear-gradient(270deg, #ffd277, #e4c358);
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+/* CTA rides the bottom of the card, clear of the delegate's face. */
+.filmstrip__cta { opacity: 0; transform: translateX(-200px); transition-duration: 1s; margin-top: auto; align-self: start; }
+
+[data-active] .filmstrip__contents .filmstrip__name,
+[data-active] .filmstrip__contents .filmstrip__country,
+[data-active] .filmstrip__contents .filmstrip__cta {
+  transform: translateX(0);
+  transition-duration: 0.66s;
+  opacity: 1;
+}
+[data-active] .filmstrip__contents .filmstrip__name { transition-delay: 0.1s; }
+[data-active] .filmstrip__contents .filmstrip__country { opacity: 0.95; transition-delay: 0.05s; }
+[data-active] .filmstrip__contents .filmstrip__cta { transition-delay: 0.15s; }
+
+@media screen and (max-width: 640px) {
+  .filmstrip { --fs-h: 21rem; --fs-w: 15rem; }
+  .filmstrip__item { margin: 0 3px; border-radius: 10px; }
+  .filmstrip__name { font-size: 1.25em; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filmstrip__item, .filmstrip__item * { transition: none; }
+}
+
+/* Home banner: warm frame behind the looping GIF (dark variant lives with the other html.dark rules). */
+.sfl-band { background: radial-gradient(120% 120% at 50% 0%, #fdf6e2 0%, #f6eed6 55%, #efe4c2 100%); }
+
+/* Scroll reveal: sections start lowered + transparent, then rise into place the first time
+   they enter the viewport (classes applied by the AppShell effect). Content is fully visible
+   by default — the effect only hides things when it is actually able to reveal them again. */
+.reveal-init { opacity: 0; transform: translateY(24px); transition: opacity 0.7s ease-out, transform 0.7s ease-out; }
+.reveal-init.reveal-in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal-init { opacity: 1; transform: none; transition: none; }
+}
+
+/* Slow light sweep across the home banner. */
+@keyframes sheen {
+  0%        { transform: translateX(0) skewX(-14deg); }
+  55%, 100% { transform: translateX(360%) skewX(-14deg); }
+}
+.animate-sheen { animation: sheen 6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheen { animation: none; }
+}
+
+*:focus-visible { outline: 2px solid #c9a227; outline-offset: 2px; border-radius: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   NIGHT MODE — activated by `html.dark` (set by the theme toggle). The app uses
+   hardcoded light colors inline, so we remap the handful of most-common tokens
+   here to keep gold + readable (white) text on a deep background.
+   ─────────────────────────────────────────────────────────────────────────── */
+html.dark { color-scheme: dark; }
+html.dark body {
+  color: #ece7db;
+  background:
+    radial-gradient(1100px 520px at 50% -12%, rgba(212,175,55,0.16), transparent 60%),
+    linear-gradient(180deg, #16171d 0%, #0f1015 100%);
+}
+
+/* Component classes — !important to beat the @apply-generated bg-white/border inside them. */
+html.dark .glass { background: #1c1e26 !important; border-color: #31333d !important; box-shadow: 0 14px 36px -22px rgba(0,0,0,0.65); }
+html.dark .glass-hover:hover { border-color: #6a5a26 !important; box-shadow: 0 20px 46px -22px rgba(0,0,0,0.75); }
+html.dark .btn-ghost { background: #1c1e26 !important; border-color: #3a3c46 !important; color: #ded9cc !important; }
+html.dark .btn-ghost:hover { background: #23252f !important; border-color: #c9a227 !important; }
+html.dark .field { background: #191b22 !important; border-color: #3a3c46 !important; color: #ece7db !important; }
+html.dark .field::placeholder { color: #6f6b60 !important; }
+html.dark .chip { background: #1c1e26 !important; border-color: #3a3c46 !important; color: #c8c2b4 !important; }
+html.dark .surface-soft { background: #191b22 !important; }
+html.dark .tag-off { background: #23252f !important; color: #b9b3a5 !important; }
+
+/* Most-common inline text tokens → light (gold #a97f16/#b8912f stays gold, readable on dark) */
+html.dark .text-\[\#23252f\] { color: #ece7db !important; }
+html.dark .text-\[\#3a3f52\] { color: #d3cdbf !important; }
+html.dark .text-\[\#5f6172\] { color: #aca795 !important; }
+html.dark .text-\[\#7a7768\] { color: #9f998b !important; }
+html.dark .text-\[\#9a968b\] { color: #857f73 !important; }
+
+/* Surfaces */
+html.dark .bg-white { background-color: #1c1e26 !important; }
+html.dark .bg-white\/90 { background-color: rgba(20,21,26,0.90) !important; }
+html.dark .bg-white\/85 { background-color: rgba(28,30,38,0.85) !important; }
+html.dark .bg-white\/80 { background-color: rgba(28,30,38,0.82) !important; }
+html.dark .bg-white\/70 { background-color: rgba(28,30,38,0.70) !important; }
+html.dark .bg-white\/60 { background-color: rgba(28,30,38,0.60) !important; }
+html.dark .bg-\[\#faf7ef\] { background-color: #191b22 !important; }
+html.dark .bg-\[\#faf6ea\] { background-color: #23252f !important; }
+html.dark .bg-\[\#efe9d8\] { background-color: #2c2e38 !important; }
+html.dark .bg-\[\#fbf9f2\]\/85 { background-color: rgba(24,26,32,0.85) !important; }
+html.dark .bg-\[\#faf7ef\]\/80, html.dark .bg-\[\#faf7ef\]\/70 { background-color: rgba(25,27,34,0.8) !important; }
+
+/* Borders */
+html.dark .border-\[\#eee6d3\] { border-color: #2f313b !important; }
+html.dark .border-\[\#e7e2d3\] { border-color: #33353f !important; }
+html.dark .border-\[\#efe4c2\] { border-color: #3a3524 !important; }
+html.dark .border-\[\#dcd6c6\] { border-color: #3a3c46 !important; }
+html.dark .border-\[\#e7d9a8\] { border-color: #4a4126 !important; }
+
+/* Hero band uses an inline light gradient — repaint it for dark. */
+html.dark .hero-band { background: radial-gradient(120% 90% at 50% -10%, #23241d 0%, #17181e 45%, #121319 100%) !important; }
+html.dark .sfl-band { background: radial-gradient(120% 120% at 50% 0%, #23241d 0%, #191b22 55%, #121319 100%) !important; }

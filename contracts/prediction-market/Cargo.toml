@@ -1,0 +1,16 @@
+[package]
+name = "prediction-market"
+version = { workspace = true }
+edition = { workspace = true }
+
+# Pageant prediction market (Polymarket-style, pageant-only). Escrowed USDC pools,
+# admin-resolved outcomes, pro-rata payouts. Self-contained on soroban-sdk.
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
