@@ -4,7 +4,7 @@ CrownFi is an open-source Stellar Testnet demonstration. It is not production vo
 
 ## Reporting a vulnerability
 
-Please use [GitHub's private vulnerability reporting form](https://github.com/MikenISATU/Stellar-CrownFi-Ap/security/advisories/new). Do not open a public issue for a vulnerability and do not include private keys, recovery phrases, access tokens, personal information, or other live credentials.
+Please use [GitHub's private vulnerability reporting form](https://github.com/MikenISATU/Stellar-CrownFi-App/security/advisories/new). Do not open a public issue for a vulnerability and do not include private keys, recovery phrases, access tokens, personal information, or other live credentials.
 
 Include the affected route or component, reproduction steps, expected impact, and a safe proof of concept when possible.
 

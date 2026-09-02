@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ShieldCheck, Wallet, FileCheck2, ExternalLink } from "lucide-react";
 
-const REPOSITORY = "https://github.com/MikenISATU/Stellar-CrownFi-Ap";
+const REPOSITORY = "https://github.com/MikenISATU/Stellar-CrownFi-App";
 const REPORT_URL = `${REPOSITORY}/security/advisories/new`;
 
 export const metadata = {

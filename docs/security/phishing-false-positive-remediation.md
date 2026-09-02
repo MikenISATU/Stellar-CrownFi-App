@@ -5,7 +5,7 @@ Last updated: 2026-09-03
 ## Scope and ownership
 
 - Official deployment: `https://stellar-crown-fi-ap-jr77.vercel.app/`
-- Public source: `https://github.com/MikenISATU/Stellar-CrownFi-Ap`
+- Public source: `https://github.com/MikenISATU/Stellar-CrownFi-App`
 - Application: open-source Stellar Testnet demonstration; no mainnet or real-value assets
 - Wallet providers: the official Freighter API and optional Privy authentication
 

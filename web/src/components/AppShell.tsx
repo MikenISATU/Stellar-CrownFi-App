@@ -89,7 +89,7 @@ function SiteFooter() {
             </div>
             <div className="mt-4 flex flex-wrap gap-4 text-xs font-semibold">
               <Link href="/security" className="text-[#f4d873] underline-offset-4 hover:underline">Security details</Link>
-              <a href="https://github.com/MikenISATU/Stellar-CrownFi-Ap" target="_blank" rel="noopener noreferrer" className="text-[#f4d873] underline-offset-4 hover:underline">Public source code</a>
+              <a href="https://github.com/MikenISATU/Stellar-CrownFi-App" target="_blank" rel="noopener noreferrer" className="text-[#f4d873] underline-offset-4 hover:underline">Public source code</a>
             </div>
           </div>
 

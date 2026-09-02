@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   applicationName: "CrownFi",
   title: "CrownFi — Crown your queen, on-chain",
   description: "Blockchain-powered voting, ticketing, and fan experience for pageants, built on Stellar.",
-  authors: [{ name: "CrownFi", url: "https://github.com/MikenISATU/Stellar-CrownFi-Ap" }],
+  authors: [{ name: "CrownFi", url: "https://github.com/MikenISATU/Stellar-CrownFi-App" }],
   creator: "CrownFi",
   publisher: "CrownFi",
   category: "technology",

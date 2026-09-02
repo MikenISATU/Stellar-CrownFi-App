@@ -1,4 +1,4 @@
-Contact: https://github.com/MikenISATU/Stellar-CrownFi-Ap/security/advisories/new
+Contact: https://github.com/MikenISATU/Stellar-CrownFi-App/security/advisories/new
 Expires: 2027-09-03T00:00:00.000Z
 Preferred-Languages: en
 Canonical: https://stellar-crown-fi-ap-jr77.vercel.app/.well-known/security.txt
