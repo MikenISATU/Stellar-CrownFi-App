@@ -1,10 +1,10 @@
 # Security policy
 
-CrownFi is an open-source Stellar Testnet demonstration. It is not production voting infrastructure and does not use real-value assets.
+CrownFi is a Stellar Testnet demonstration. It is not production voting infrastructure and does not use real-value assets.
 
 ## Reporting a vulnerability
 
-Please use [GitHub's private vulnerability reporting form](https://github.com/MikenISATU/Stellar-CrownFi-App/security/advisories/new). Do not open a public issue for a vulnerability and do not include private keys, recovery phrases, access tokens, personal information, or other live credentials.
+Email [napilanmileskenneth@gmail.com](mailto:napilanmileskenneth@gmail.com) with the subject `CrownFi security report`. Do not include private keys, recovery phrases, access tokens, personal information, or other live credentials.
 
 Include the affected route or component, reproduction steps, expected impact, and a safe proof of concept when possible.
 

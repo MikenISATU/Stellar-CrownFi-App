@@ -5,8 +5,9 @@ Last updated: 2026-09-03
 ## Scope and ownership
 
 - Official deployment: `https://stellar-crown-fi-ap-jr77.vercel.app/`
-- Public source: `https://github.com/MikenISATU/Stellar-CrownFi-App`
-- Application: open-source Stellar Testnet demonstration; no mainnet or real-value assets
+- Source repository: `https://github.com/MikenISATU/Stellar-CrownFi-App` (access-controlled at the time of review)
+- Public remediation record: `https://stellar-crown-fi-ap-jr77.vercel.app/security/remediation`
+- Application: Stellar Testnet demonstration; no mainnet or real-value assets
 - Wallet providers: the official Freighter API and optional Privy authentication
 
 CrownFi never asks for or stores a recovery phrase, seed phrase, private key, or wallet password.

@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { ShieldCheck, Wallet, FileCheck2, ExternalLink } from "lucide-react";
 
-const REPOSITORY = "https://github.com/MikenISATU/Stellar-CrownFi-App";
-const REPORT_URL = `${REPOSITORY}/security/advisories/new`;
+const REPORT_URL = "mailto:napilanmileskenneth@gmail.com?subject=CrownFi%20security%20report";
 
 export const metadata = {
   title: "Security & wallet safety — CrownFi",
@@ -18,7 +17,7 @@ const cards = [
   {
     Icon: FileCheck2,
     title: "Readable approvals",
-    body: "Wallet sign-in uses a short CrownFi challenge containing the wallet address, this site's origin, a one-time nonce, and an expiry. Transactions are presented by the wallet before approval.",
+    body: "Wallet sign-in uses a short CrownFi challenge containing the wallet address, this site's origin, a unique nonce, and an expiry. Transactions are presented by the wallet before approval.",
   },
   {
     Icon: ShieldCheck,
@@ -34,7 +33,7 @@ export default function SecurityPage() {
         <div className="eyebrow mb-2">Trust center</div>
         <h1 className="tracking-tight text-4xl font-semibold text-[#23252f] sm:text-5xl">Security & wallet safety</h1>
         <p className="mt-4 text-base leading-relaxed text-[#5f6172]">
-          CrownFi is an open-source Stellar Testnet demo. This page documents the wallet prompts you should expect and the checks built into the application.
+          CrownFi is a Stellar Testnet demo. This page documents the wallet prompts you should expect and the checks built into the application.
         </p>
       </header>
 
@@ -60,17 +59,17 @@ export default function SecurityPage() {
 
       <section className="grid gap-5 lg:grid-cols-2">
         <article className="surface-soft rounded-2xl p-6">
-          <h2 className="font-display text-xl font-semibold text-[#23252f]">Verify the implementation</h2>
-          <p className="mt-2 text-sm leading-relaxed text-[#5f6172]">The source code and security controls are public for reviewers. Wallet access is implemented with the official Stellar Freighter API and optional Privy authentication.</p>
-          <a href={REPOSITORY} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 font-semibold text-[#a97f16] hover:underline">
-            View source on GitHub <ExternalLink size={15} />
-          </a>
+          <h2 className="font-display text-xl font-semibold text-[#23252f]">Review the remediation</h2>
+          <p className="mt-2 text-sm leading-relaxed text-[#5f6172]">The public review record documents the blocklist timeline, wallet behavior, dependency audit, security controls, and repeatable checks.</p>
+          <Link href="/security/remediation" className="mt-4 inline-flex items-center gap-2 font-semibold text-[#a97f16] hover:underline">
+            Read the review record
+          </Link>
         </article>
         <article className="surface-soft rounded-2xl p-6">
           <h2 className="font-display text-xl font-semibold text-[#23252f]">Report a vulnerability</h2>
-          <p className="mt-2 text-sm leading-relaxed text-[#5f6172]">Please use a private GitHub security advisory for vulnerabilities. Do not include private keys, tokens, personal data, or live credentials in a report.</p>
-          <a href={REPORT_URL} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 font-semibold text-[#a97f16] hover:underline">
-            Open a private security report <ExternalLink size={15} />
+          <p className="mt-2 text-sm leading-relaxed text-[#5f6172]">Email the project owner with a concise reproduction. Never include private keys, recovery phrases, tokens, personal data, or live credentials.</p>
+          <a href={REPORT_URL} className="mt-4 inline-flex items-center gap-2 font-semibold text-[#a97f16] hover:underline">
+            Email a security report <ExternalLink size={15} />
           </a>
         </article>
       </section>
