@@ -75,7 +75,7 @@ export default function FaqPage() {
       <header>
         <div className="eyebrow mb-2">Help center</div>
         <h1 className="tracking-tight text-4xl font-semibold text-[#23252f] sm:text-5xl">Frequently asked questions</h1>
-        <p className="mt-2 max-w-xl text-sm text-[#5f6172]">Everything about wallets, voting, tickets, NFTs, and rewards. Still stuck? Reach us on Discord.</p>
+        <p className="mt-2 max-w-xl text-sm text-[#5f6172]">Everything about wallets, voting, tickets, NFTs, and rewards. For wallet-safety details and verified project links, see the <Link href="/security" className="font-semibold text-[#a97f16] underline">Security page</Link>.</p>
       </header>
 
       {GROUPS.map((g) => (

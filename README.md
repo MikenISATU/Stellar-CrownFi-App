@@ -4,6 +4,8 @@ CrownFi is a hackathon/testnet MVP for pageant voting, ticketing, fan rewards, c
 
 > **Status:** hackathon MVP. This repository is suitable for demos, review, and iteration. It is **not** production-ready voting infrastructure, mainnet financial infrastructure, or a replacement for legal tabulation/compliance systems.
 
+Official testnet deployment: [stellar-crown-fi-ap-jr77.vercel.app](https://stellar-crown-fi-ap-jr77.vercel.app/). CrownFi never asks for a recovery phrase, seed phrase, or private key. Review the public [security policy](SECURITY.md), the deployed [wallet-safety page](https://stellar-crown-fi-ap-jr77.vercel.app/security), and the [false-positive remediation record](docs/security/phishing-false-positive-remediation.md) before connecting a wallet.
+
 ## What's new in the finale build (merged to `main`)
 
 Beyond the mainline voting/ticketing/collectibles, this build adds:
@@ -306,9 +308,13 @@ The mainline includes an MVP security hardening pass that is appropriate for a h
 Current hardening includes:
 
 - server-side wallet-signed admin sessions;
+- server-side wallet-signed fan sessions and Privy access-token verification;
 - httpOnly admin session cookies;
 - server-side checks on sensitive admin routes;
 - short-lived transaction intents for signed XDR confirmation;
+- exact, server-origin-bound wallet challenge verification;
+- same-origin enforcement for browser API mutations and signed PayMongo webhook verification;
+- strict security headers, constrained uploads, and a published security contact;
 - live-mode rejection for direct mock mint endpoints;
 - faucet rate/amount limits;
 - dependency audit cleanup;
@@ -317,7 +323,6 @@ Current hardening includes:
 
 Known limitations:
 
-- fan/user wallet sessions are not yet cryptographically enforced server-side across all flows;
 - payment and mint are not fully atomic yet;
 - in-memory challenges, sessions, rate limits, and transaction intents are demo/server-singleton only;
 - contract IDs and live-mode configuration need final testnet validation before presenting live Stellar flows;
@@ -336,6 +341,7 @@ npm audit --audit-level=moderate
 npm audit --audit-level=moderate --omit=dev
 npm run typecheck
 npm run test:merkle
+npm run test:security
 ```
 
 ```bash

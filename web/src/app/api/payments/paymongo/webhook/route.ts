@@ -11,15 +11,22 @@ export async function POST(req: NextRequest) {
   const secret = process.env.PAYMONGO_WEBHOOK_SECRET;
   const sigHeader = req.headers.get("paymongo-signature");
 
-  // Verify HMAC signature (t=timestamp, te=test sig, li=live sig).
-  if (secret) {
-    if (!sigHeader) return NextResponse.json({ error: "no_signature" }, { status: 401 });
-    const parts = Object.fromEntries(sigHeader.split(",").map((p) => p.split("=")));
-    const expected = crypto.createHmac("sha256", secret).update(`${parts.t}.${raw}`).digest("hex");
-    const provided = parts.li || parts.te || "";
-    if (provided.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected))) {
-      return NextResponse.json({ error: "bad_signature" }, { status: 401 });
-    }
+  // Payment fulfillment must fail closed. Without a configured webhook secret an attacker could
+  // otherwise forge a "paid" event and trigger a mint. PayMongo signs `timestamp.rawBody`.
+  if (!secret) {
+    console.error("[paymongo webhook] PAYMONGO_WEBHOOK_SECRET is not configured");
+    return NextResponse.json({ error: "webhook_not_configured" }, { status: 503 });
+  }
+  if (!sigHeader) return NextResponse.json({ error: "no_signature" }, { status: 401 });
+  const parts = Object.fromEntries(sigHeader.split(",").map((p) => p.trim().split("=", 2)));
+  const timestamp = Number(parts.t);
+  if (!Number.isFinite(timestamp) || Math.abs(Date.now() / 1000 - timestamp) > 300) {
+    return NextResponse.json({ error: "stale_signature" }, { status: 401 });
+  }
+  const expected = crypto.createHmac("sha256", secret).update(`${parts.t}.${raw}`).digest("hex");
+  const provided = parts.li || parts.te || "";
+  if (provided.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected))) {
+    return NextResponse.json({ error: "bad_signature" }, { status: 401 });
   }
 
   let event: any;

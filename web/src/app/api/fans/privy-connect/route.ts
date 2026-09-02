@@ -24,10 +24,9 @@ export async function POST(req: NextRequest) {
   try {
     identity = await resolvePrivyStellarIdentity(token);
   } catch (e: any) {
-    // TEMP DEBUG: include the real message so it shows in the browser Network tab.
     const detail = e?.message ?? String(e);
     console.error("[api/fans/privy-connect] Privy verify/provision failed:", detail, e);
-    return NextResponse.json({ error: "privy_error", detail }, { status: 502 });
+    return NextResponse.json({ error: "privy_error" }, { status: 502 });
   }
 
   const { email, address } = identity;

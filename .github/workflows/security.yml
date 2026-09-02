@@ -64,6 +64,8 @@ jobs:
         run: npm run typecheck
       - name: Test Merkle receipts
         run: npm run test:merkle
+      - name: Test request and wallet security
+        run: npm run test:security
 
   contracts-security:
     name: Soroban contracts audit

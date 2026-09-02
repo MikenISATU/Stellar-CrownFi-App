@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import { PrivyClient } from "@privy-io/node";
 
 // Wallet abstraction. The rest of the app depends only on this interface, so the underlying
 // provider can be swapped (mock -> Privy -> Passkey Kit smart wallets) without touching app code.
@@ -55,7 +56,7 @@ class MockWallet implements WalletProvider {
 //
 // Wiring steps:
 //  1. Set PRIVY_APP_ID and PRIVY_APP_SECRET (server-only) in web/.env.
-//  2. npm i @privy-io/server-auth
+//  2. npm i @privy-io/node
 //  3. Store each fan's Privy user id on the Fan record at first login, and map
 //     fanHandle -> privyUserId here (the mock adapter is used until then).
 //  4. Confirm the current Stellar wallet-creation call against Privy's docs; the API moves fast.
@@ -73,18 +74,12 @@ class PrivyWallet implements WalletProvider {
       );
     }
 
-    // Dynamic import via a string-typed specifier so the project still typechecks and builds
-    // before @privy-io/server-auth is installed. Once installed, this resolves normally.
-    const pkg: string = "@privy-io/server-auth";
-    const mod: any = await import(pkg).catch(() => {
-      throw new Error("Install the Privy server SDK first:  npm i @privy-io/server-auth");
-    });
-    const privy = new mod.PrivyClient(appId, appSecret);
+    const privy = new PrivyClient({ appId, appSecret });
 
     // In production, resolve the fan's Privy user id (stored on the Fan record at first login)
     // rather than passing the handle. Create-or-fetch that user's Stellar wallet and return it.
     // Field names follow Privy's server wallet API; confirm against current docs.
-    const wallet = await privy.walletApi.createWallet({ chainType: "stellar", owner: { userId: fanHandle } });
+    const wallet = await privy.wallets().create({ chain_type: "stellar", owner: { user_id: fanHandle } });
     return wallet.address as string;
   }
 }

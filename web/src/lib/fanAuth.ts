@@ -2,6 +2,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { isLikelyStellarAddress } from "@/lib/adminAuth";
 import { signToken, verifyToken } from "@/lib/statelessToken";
+import { canonicalAppOrigin } from "@/lib/appOrigin";
 
 // Fan (voter) authentication. Same shape as adminAuth, but there is no allowlist:
 // any wallet that proves control of its Stellar address (SEP-53 signature) gets a
@@ -14,16 +15,20 @@ const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 const SEP53_PREFIX = "Stellar Signed Message:\n";
 
 type Challenge = { address: string; expiresAt: number };
+type ChallengePayload = { a: string; e: number; i: number; o: string; r: string };
 type FanSessionPayload = { fanId: string; address: string; exp: number; iat: number };
 
 const challenges = new Map<string, Challenge>();
 
-function appOrigin(req: NextRequest): string {
-  return (
-    process.env.NEXT_PUBLIC_APP_ORIGIN ||
-    req.headers.get("origin") ||
-    `${req.headers.get("x-forwarded-proto") ?? "http"}://${req.headers.get("host") ?? "localhost:3000"}`
-  );
+function challengeMessage(payload: ChallengePayload, nonce: string): string {
+  return [
+    "CrownFi sign-in",
+    `Address: ${payload.a}`,
+    `Nonce: ${nonce}`,
+    `Origin: ${payload.o}`,
+    `Issued At: ${new Date(payload.i).toISOString()}`,
+    `Expires At: ${new Date(payload.e).toISOString()}`,
+  ].join("\n");
 }
 
 // The nonce is a stateless HMAC token carrying {address, expiry} — any server instance can
@@ -32,17 +37,17 @@ function appOrigin(req: NextRequest): string {
 export function createFanChallenge(address: string, req: NextRequest): { nonce: string; message: string; expiresAt: number } {
   const now = Date.now();
   const expiresAt = now + CHALLENGE_TTL_MS;
-  const nonce = signToken({ a: address, e: expiresAt, r: randomBytes(8).toString("base64url") });
+  const payload: ChallengePayload = {
+    a: address,
+    e: expiresAt,
+    i: now,
+    o: canonicalAppOrigin(req),
+    r: randomBytes(8).toString("base64url"),
+  };
+  const nonce = signToken(payload);
   challenges.set(nonce, { address, expiresAt });
 
-  const message = [
-    "CrownFi sign-in",
-    `Address: ${address}`,
-    `Nonce: ${nonce}`,
-    `Origin: ${appOrigin(req)}`,
-    `Issued At: ${new Date(now).toISOString()}`,
-    `Expires At: ${new Date(expiresAt).toISOString()}`,
-  ].join("\n");
+  const message = challengeMessage(payload, nonce);
 
   return { nonce, message, expiresAt };
 }
@@ -87,6 +92,13 @@ export async function verifyFanSignature(params: {
   const nonce = extractNonce(message);
   if (!nonce) return { ok: false, error: "missing_nonce", status: 400 };
 
+  const payload = verifyToken<ChallengePayload>(nonce);
+  if (!payload || payload.a !== address) return { ok: false, error: "invalid_challenge", status: 401 };
+  if (Date.now() > payload.e) return { ok: false, error: "challenge_expired", status: 401 };
+  if (message !== challengeMessage(payload, nonce)) {
+    return { ok: false, error: "challenge_message_mismatch", status: 401 };
+  }
+
   // Same-instance path: consume from the Map (strict one-time use). Cross-instance path
   // (serverless): fall back to verifying the nonce's own HMAC payload.
   const local = challenges.get(nonce);
@@ -94,10 +106,6 @@ export async function verifyFanSignature(params: {
   if (local) {
     if (local.address !== address) return { ok: false, error: "invalid_challenge", status: 401 };
     if (Date.now() > local.expiresAt) return { ok: false, error: "challenge_expired", status: 401 };
-  } else {
-    const payload = verifyToken<{ a: string; e: number }>(nonce);
-    if (!payload || payload.a !== address) return { ok: false, error: "invalid_challenge", status: 401 };
-    if (Date.now() > payload.e) return { ok: false, error: "challenge_expired", status: 401 };
   }
 
   try {

@@ -4,9 +4,10 @@ import sharp from "sharp";
 import { db } from "@/lib/db";
 import { readFanSession } from "@/lib/fanAuth";
 import { readAdminSession } from "@/lib/adminAuth";
+import { rateLimit } from "@/lib/ratelimit";
 
 const MAX_BYTES = 15 * 1024 * 1024; // 15 MB (client downscales first; this is a safety net for GIFs/fallbacks)
-const ALLOWED = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+const ALLOWED = ["image/png", "image/jpeg", "image/webp"];
 const MAX_DIM = 1600; // banners never need to be wider than this
 
 // Generic image upload (banners, etc.), any signed-in fan or admin. Images are stored in
@@ -16,6 +17,8 @@ export async function POST(req: NextRequest) {
   const fan = readFanSession(req);
   const admin = readAdminSession(req);
   if (!fan && !admin) return NextResponse.json({ error: "fan_auth_required" }, { status: 401 });
+  const limiter = rateLimit(`upload:${fan?.fanId ?? admin?.address}`, 10, 60 * 60 * 1000);
+  if (!limiter.ok) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
 
   const form = await req.formData().catch(() => null);
   const file = form?.get("file") as File | null;
@@ -26,21 +29,14 @@ export async function POST(req: NextRequest) {
   const raw = Buffer.from(await file.arrayBuffer());
 
   try {
-    // Animated GIFs are passed through untouched (re-encoding would flatten them).
-    // Everything else is downscaled + re-encoded to WebP so banners stay lightweight.
-    let mime: string;
-    let out: Buffer;
-    if (file.type === "image/gif") {
-      mime = "image/gif";
-      out = raw;
-    } else {
-      mime = "image/webp";
-      out = await sharp(raw)
-        .rotate() // honor EXIF orientation
-        .resize({ width: MAX_DIM, height: MAX_DIM, fit: "inside", withoutEnlargement: true })
-        .webp({ quality: 80 })
-        .toBuffer();
-    }
+    // Decode and re-encode every accepted file. This rejects mislabeled/polyglot uploads and
+    // guarantees that stored bytes match the MIME type we serve.
+    const mime = "image/webp";
+    const out = await sharp(raw)
+      .rotate() // honor EXIF orientation
+      .resize({ width: MAX_DIM, height: MAX_DIM, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
 
     const img = await db.storedImage.create({
       data: { id: randomBytes(12).toString("hex"), mime, bytes: out },

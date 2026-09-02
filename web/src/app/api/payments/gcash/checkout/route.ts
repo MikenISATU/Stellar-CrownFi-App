@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireFan } from "@/lib/fanAuth";
 import { paymentsAllowed } from "@/lib/settings";
 import { gcashConfigured, createGcashCheckout } from "@/lib/payments/gcash";
+import { canonicalAppOrigin } from "@/lib/appOrigin";
 
 // Start a GCash (PayMongo) checkout for a collectible. Returns a hosted URL to redirect to.
 // Fulfillment (minting) happens later from the PayMongo webhook once payment clears.
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
   const collectible = await db.collectible.findUnique({ where: { id: collectibleId } });
   if (!collectible) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
-  const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || req.headers.get("origin") || "http://localhost:3000";
+  const origin = canonicalAppOrigin(req);
   try {
     const checkout = await createGcashCheckout({
       amountUsd: collectible.priceUsdc,

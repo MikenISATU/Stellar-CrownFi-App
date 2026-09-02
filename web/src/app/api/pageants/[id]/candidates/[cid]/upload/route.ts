@@ -5,9 +5,10 @@ import { db } from "@/lib/db";
 import { readFanSession } from "@/lib/fanAuth";
 import { isEditableByOrganizer } from "@/lib/pageant";
 import { CANDIDATE_ASSET_KINDS } from "@/lib/assets";
+import { rateLimit } from "@/lib/ratelimit";
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
-const ALLOWED = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+const ALLOWED = ["image/png", "image/jpeg", "image/webp"];
 const MAX_DIM = 1600;
 
 // POST (multipart) — upload a candidate image of a given kind. Stored in Postgres and served
@@ -17,6 +18,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const fan = readFanSession(req);
   if (!fan) return NextResponse.json({ error: "fan_auth_required" }, { status: 401 });
+  const limiter = rateLimit(`candidate-upload:${fan.fanId}`, 30, 60 * 60 * 1000);
+  if (!limiter.ok) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
 
   const pageant = await db.pageant.findUnique({ where: { id } });
   if (!pageant) return NextResponse.json({ error: "not_found" }, { status: 404 });
@@ -36,20 +39,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   try {
     const raw = Buffer.from(await file.arrayBuffer());
-    // GIFs pass through (re-encoding flattens animation); everything else → downscaled WebP.
-    let mime: string;
-    let out: Buffer;
-    if (file.type === "image/gif") {
-      mime = "image/gif";
-      out = raw;
-    } else {
-      mime = "image/webp";
-      out = await sharp(raw)
-        .rotate()
-        .resize({ width: MAX_DIM, height: MAX_DIM, fit: "inside", withoutEnlargement: true })
-        .webp({ quality: 82 })
-        .toBuffer();
-    }
+    // Decode and re-encode every accepted file so mislabeled/polyglot content is rejected.
+    const mime = "image/webp";
+    const out = await sharp(raw)
+      .rotate()
+      .resize({ width: MAX_DIM, height: MAX_DIM, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer();
     const img = await db.storedImage.create({
       data: { id: randomBytes(12).toString("hex"), mime, bytes: out },
       select: { id: true },

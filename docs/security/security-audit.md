@@ -1,19 +1,22 @@
 # CrownFi security audit notes
 
-Audit date: 2026-07-06  
+Audit date: 2026-09-03
 Scope: `web/` Next.js API routes, wallet/session flow, package supply chain, GitHub Actions security checks, and a source-level review of `contracts/` Soroban contracts.
 
 ## Executive summary
 
 CrownFi is a credible hackathon MVP, but it should be presented as **testnet/demo software**, not production voting infrastructure. The architecture is directionally correct: high-volume voting is off-chain, while Stellar anchors proofs and handles ownership/payment primitives. The main risks were in web/API authorization and transaction confirmation, not in the Merkle idea itself.
 
-This pass fixed several high-signal issues that a judge or reviewer could quickly notice:
+This pass fixed several high-signal issues that a judge or reviewer could quickly notice. A follow-up review on 2026-09-03 also traced the production hostname's phishing warning to an automated blocklist synchronization entry, documented the evidence, and hardened the public deployment before requesting human review:
 
 - admin mutation routes now require a server-verified, wallet-signed admin session;
 - live purchase/anchor confirmation now checks that the signed XDR matches a server-prepared intent;
 - direct mock mint endpoints are blocked in live mode;
 - organizer request review, fan listing, contestant creation, round creation, and round closing are no longer protected only by client UI;
-- npm audit is clean after overriding the vulnerable transitive PostCSS copy;
+- npm audit is clean after updating Next.js, Stellar SDK, Privy, Sharp, PostCSS, and vulnerable transitive packages;
+- fan and admin challenges are bound to a server-derived canonical origin and exact message contents;
+- unsafe browser API requests receive same-origin checks, while payment webhooks fail closed without a valid signing secret;
+- security headers, safe image transcoding, a trust page, and `security.txt` are now published;
 - scheduled GitHub Actions now run no-GHAS-required security checks: npm audit, TypeScript/Merkle checks, Rust format/test, blocking Rust vulnerability audit, non-blocking Rust advisory reporting, a secret smoke test, and a local CodeQL scan that does not upload to GitHub code scanning.
 
 
@@ -37,7 +40,14 @@ For a VPS-hosted demo, the minimum expectation is HTTPS in front of the app/API,
 
 | Area | Status | Change |
 |---|---:|---|
-| NPM dependency audit | Fixed | `postcss` upgraded/overridden to `^8.5.10`; `npm audit --audit-level=moderate` now reports 0 vulnerabilities. |
+| NPM dependency audit | Fixed | Updated Next.js, Stellar SDK, Privy, Sharp, PostCSS, and transitive overrides; both npm audits report 0 vulnerabilities. |
+| Dependency maintenance | Fixed | Replaced deprecated `@privy-io/server-auth` with `@privy-io/node`. |
+| Challenge integrity | Fixed | The server reconstructs the exact expected fan/admin message and binds it to a canonical server-derived origin. |
+| Browser mutation origin | Fixed | Middleware rejects cross-site and mismatched-origin unsafe API requests. |
+| PayMongo webhook | Fixed | Missing signing configuration now fails closed; signatures must be present, valid, and fresh. |
+| Upload safety | Improved | Images are decoded and re-encoded as WebP, unsupported/GIF inputs are rejected, and upload routes are rate-limited. |
+| Browser hardening | Improved | Added CSP, HSTS, anti-framing, MIME-sniffing, referrer, permissions, and cross-domain-policy headers. |
+| Public trust material | Added | Added `/security`, `/.well-known/security.txt`, repository policy, and a false-positive remediation record. |
 | Admin auth | Fixed for MVP | Added Freighter `signMessage` challenge/verify flow, httpOnly admin cookie, HMAC session token, and server-side allowlist checks. |
 | Admin API routes | Fixed for MVP | Protected admin mutations and sensitive admin reads with `requireAdmin()`. |
 | Signed XDR confirmation | Fixed for MVP | Added short-lived transaction intents; confirmation must match the server-prepared XDR body hash and expected source account. |
@@ -55,6 +65,8 @@ cd web
 npm audit --audit-level=moderate --omit=dev
 npm audit --audit-level=moderate
 npm run test:merkle
+npm run test:security
+npm run build
 ```
 
 Results:
@@ -62,11 +74,11 @@ Results:
 - `npm audit --audit-level=moderate --omit=dev`: **0 vulnerabilities**
 - `npm audit --audit-level=moderate`: **0 vulnerabilities**
 - `npm run test:merkle`: **passed**
+- `npm run test:security`: **passed**
+- `npm run typecheck`: **passed**
+- `npm run build`: **passed**
 
-Not fully run locally in the patch container:
-
-- `npm run typecheck`: blocked in this container because Prisma tried to download engines from `binaries.prisma.sh` and DNS/network access failed. The GitHub workflow runs `npm ci` normally and then `prisma generate && tsc --noEmit`.
-- `cargo test`, `cargo fmt`, `cargo audit`: not run in the patch container because it does not have `cargo`/`rustc`. The GitHub workflow installs/uses Rust stable and runs these checks.
+The web checks above were run locally. Rust contract checks remain covered separately by the CI workflow.
 
 Follow-up validation on the reviewer machine passed:
 
@@ -175,7 +187,7 @@ Production note: replace the in-memory limiter with Upstash/Redis before any pub
 **Severity:** Moderate  
 **Status:** Fixed
 
-`npm audit` reported a moderate PostCSS advisory through Next's nested dependency tree. `postcss` is now upgraded/overridden to `^8.5.10`, and audit is clean.
+`npm audit` reported a moderate PostCSS advisory through Next's nested dependency tree. `postcss` is now upgraded/overridden to `^8.5.26`, and audit is clean.
 
 ### 7. Local/generated artifacts committed
 
@@ -191,26 +203,7 @@ These are now ignored. This helps reduce the “AI-generated/vibecoded repo dump
 
 ## Open findings / next fixes
 
-### A. Fan wallet login is still not cryptographically proven server-side
-
-**Severity:** High  
-**Status:** Open
-
-`POST /api/fans/connect` still accepts a wallet address from the browser and upserts a fan. The browser obtained that address from Freighter, but the server does not yet verify a wallet signature for normal fan sessions.
-
-Impact:
-
-- a malicious client could claim another wallet address;
-- voting uses `fanId`, so a client that discovers or creates fan records may attempt impersonation flows;
-- dashboard/purchase flows should eventually require a signed fan session, not just a posted `fanId`.
-
-Recommended fix:
-
-- reuse the admin challenge pattern for all fans;
-- issue an httpOnly `crownfi_fan` session cookie;
-- make `/api/vote`, `/api/dashboard`, ticket purchase, collectible purchase, and receipt lookup derive `fanId` from the session instead of trusting request body/query parameters.
-
-### B. Payment and mint are not atomic
+### A. Payment and mint are not atomic
 
 **Severity:** High for real money  
 **Status:** Open
@@ -222,7 +215,7 @@ Recommended fix:
 - move payment + mint into one Soroban contract transaction;
 - or add an idempotent server-side settlement table with retry/refund states.
 
-### C. In-memory challenges, sessions, rate limits, and tx intents are demo-only
+### B. In-memory challenges, sessions, rate limits, and tx intents are demo-only
 
 **Severity:** Medium  
 **Status:** Open
@@ -234,7 +227,7 @@ Recommended fix:
 - Redis/Upstash for rate limits and short-lived challenges/intents;
 - Postgres table for purchase settlement state.
 
-### D. Soroban contracts need CI build/test confirmation
+### C. Soroban contracts need CI build/test confirmation
 
 **Severity:** Medium  
 **Status:** Open until CI passes
@@ -245,7 +238,7 @@ Extra concern:
 
 - `ticket` and `collectible` depend on OpenZeppelin Stellar crates and macros. Verify the exact `stellar-tokens` API and `ContractOverrides` pattern against the pinned crate version in CI.
 
-### E. Rust dependency advisory warnings are transitive through Soroban
+### D. Rust dependency advisory warnings are transitive through Soroban
 
 **Severity:** Low/Medium supply-chain visibility  
 **Status:** Documented / non-blocking CI report
@@ -258,7 +251,7 @@ Extra concern:
 
 These are not direct CrownFi dependencies. The project keeps `cargo audit` as a blocking vulnerability check, while `cargo audit --deny warnings` is retained as a non-blocking visibility check. Revisit this when upgrading Soroban/Stellar SDK versions. Do not force random overrides into the Soroban dependency tree without verifying compatibility.
 
-### F. Voting privacy is only pseudonymous
+### E. Voting privacy is only pseudonymous
 
 **Severity:** Medium  
 **Status:** Open
@@ -270,7 +263,7 @@ Recommended fix:
 - derive leaf commitments from a server-held round salt or voter-specific blind nonce;
 - preserve receipt verification without exposing the full mapping.
 
-### G. Round IDs are compressed to `u32` on-chain
+### F. Round IDs are compressed to `u32` on-chain
 
 **Severity:** Low/Medium  
 **Status:** Open
@@ -281,15 +274,7 @@ Recommended fix:
 
 - use `BytesN<32>` or `String` round identifiers in the contract storage key instead of `u32`.
 
-### H. Server-side admin auth should also check request origin
-
-**Severity:** Low/Medium  
-**Status:** Open
-
-The httpOnly cookie uses `SameSite=Strict`, which helps. For production, mutation routes should additionally verify `Origin`/`Host` to reduce CSRF and cross-site misuse risk.
-
-
-### I. Platform refactor introduces a Rust API surface
+### G. Platform refactor introduces a Rust API surface
 
 **Severity:** Medium until fully wired  
 **Status:** In progress
@@ -308,7 +293,7 @@ Security expectations for this refactor:
 This is acceptable for hackathon architecture work as long as the README, SECURITY.md, and deployment docs continue to say that the system is testnet/MVP only.
 
 
-### J. UI/component duplication can hide security copy and flow regressions
+### H. UI/component duplication can hide security copy and flow regressions
 
 **Severity:** Low/Medium  
 **Status:** In progress
@@ -335,6 +320,7 @@ Runs on PR, push to `main`, weekly schedule, and manual dispatch. It intentional
 - npm lockfile integrity smoke check;
 - `npm run typecheck`;
 - `npm run test:merkle`;
+- `npm run test:security`;
 - Rust format/test for contracts;
 - blocking `cargo audit` vulnerability check;
 - non-blocking `cargo audit --deny warnings` advisory report;
@@ -357,4 +343,3 @@ Enable these later when someone with repository settings permission can do it:
 Use this framing during judging:
 
 > CrownFi is not pretending that blockchain makes voting magically faster. Votes are ingested off-chain for scale, then a tamper-evident Merkle root and tally hash are anchored on Stellar for auditability. Tickets, collectibles, and USDC settlement use Stellar where ownership and payments matter. We also added wallet-signed admin sessions, dependency auditing, CodeQL, and recurring CI security checks so the project can be reviewed like an engineering project, not only a demo UI.
-

@@ -61,43 +61,13 @@ const TABS = [
   { href: "/me", label: "Me", Icon: Icons.Me },
 ];
 
-/* Brand icons (lucide has no brand marks, so inline minimal SVGs). */
-function DiscordIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" className={className} aria-hidden>
-      <path d="M20.32 4.37A19.8 19.8 0 0 0 15.45 3l-.24.44c1.55.37 2.9 1 4.14 1.86A16.3 16.3 0 0 0 12 4.5c-2.5 0-4.86.42-7.35 1.8 1.24-.86 2.6-1.5 4.14-1.86L8.55 3A19.8 19.8 0 0 0 3.68 4.37 20.6 20.6 0 0 0 .5 18.4 19.9 19.9 0 0 0 6.6 21l.86-1.42a12.9 12.9 0 0 1-2.02-.97l.5-.36c3.86 1.78 8.26 1.78 12.12 0l.5.36c-.64.38-1.32.7-2.02.97L17.4 21a19.9 19.9 0 0 0 6.1-2.6 20.6 20.6 0 0 0-3.18-14.03ZM8.6 15.3c-.98 0-1.78-.9-1.78-2s.79-2 1.78-2c.99 0 1.79.9 1.78 2 0 1.1-.79 2-1.78 2Zm6.8 0c-.98 0-1.78-.9-1.78-2s.79-2 1.78-2c.99 0 1.79.9 1.78 2 0 1.1-.79 2-1.78 2Z" />
-    </svg>
-  );
-}
-function XIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" className={className} aria-hidden>
-      <path d="M18.24 2.25h3.31l-7.23 8.26 8.5 11.24h-6.66l-5.22-6.82-5.97 6.82H1.66l7.73-8.84L1.25 2.25h6.83l4.71 6.23 5.45-6.23Zm-1.16 17.52h1.83L7.01 4.13H5.05l12.03 15.64Z" />
-    </svg>
-  );
-}
-function LinkedInIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" className={className} aria-hidden>
-      <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14ZM7.12 20.45H3.55V9h3.57v11.45ZM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0Z" />
-    </svg>
-  );
-}
-
-const SOCIALS = [
-  { href: "https://discord.com/", label: "Discord", Icon: DiscordIcon },
-  { href: "https://x.com/CrownFi_app", label: "X", Icon: XIcon },
-  { href: "https://www.linkedin.com/", label: "LinkedIn", Icon: LinkedInIcon },
-];
-
 const FOOTER_COLS: { title: string; links: [string, string][] }[] = [
   { title: "Explore", links: [["/", "Home"], ["/predictions", "Predict"], ["/vote", "Vote"], ["/leaderboard", "Leaderboard"]] },
   { title: "Experience", links: [["/tickets", "Tickets"], ["/contestants", "Collect"], ["/loyalty", "Rewards"], ["/verify", "Verify a vote"]] },
-  { title: "Organizers", links: [["/organizer", "Host a pageant"], ["/faq", "FAQ"], ["/faq#legal", "Privacy"], ["/faq#legal", "Terms"]] },
+  { title: "Trust", links: [["/security", "Wallet safety"], ["/faq", "FAQ"], ["/faq#legal", "Privacy"], ["/faq#legal", "Terms"]] },
 ];
 
 function SiteFooter() {
-  const [subscribed, setSubscribed] = useState(false);
   return (
     <footer className="mt-24 bg-gradient-to-r from-[#3b2512] via-[#6b471d] to-[#3b2512] text-[#f3e7c3]">
       {/* Thin gold accent line grounds the dark footer against the light page. */}
@@ -114,24 +84,12 @@ function SiteFooter() {
             <p className="mt-4 text-sm leading-relaxed text-[#ddcca3]">
               Blockchain-powered voting, tickets, and prediction markets for pageants — built on Stellar.
             </p>
-            <form className="mt-5" onSubmit={(e) => { e.preventDefault(); setSubscribed(true); }}>
-              {subscribed ? (
-                <div className="rounded-xl bg-white/5 px-3.5 py-2.5 text-sm text-[#f3e7c3] ring-1 ring-[#e6c65a]/25">Thanks — you’re subscribed. ✓</div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <input type="email" required placeholder="Email for updates" aria-label="Email"
-                    className="min-w-0 flex-1 rounded-xl bg-black/10 px-3.5 py-2.5 text-sm text-white outline-none ring-1 ring-[#e6c65a]/25 transition placeholder-[#b9a77f] focus:ring-[#e6c65a]/60" />
-                  <button type="submit" className="btn-gold shrink-0 !min-h-[40px] !px-5 !py-2">Join</button>
-                </div>
-              )}
-            </form>
-            <div className="mt-5 flex items-center gap-2">
-              {SOCIALS.map(({ href, label, Icon }) => (
-                <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}
-                  className="grid h-9 w-9 place-items-center rounded-full text-[#ddcca3] ring-1 ring-[#e6c65a]/30 transition hover:bg-[#e6c65a] hover:text-[#3b2512] hover:ring-transparent">
-                  <Icon />
-                </a>
-              ))}
+            <div className="mt-5 rounded-xl bg-black/10 px-4 py-3 text-xs leading-relaxed text-[#e8dab6] ring-1 ring-[#e6c65a]/20">
+              <b className="text-[#f4d873]">Testnet demo.</b> CrownFi never asks for a recovery phrase or private key. Wallet approvals are shown by Freighter or Privy before signing.
+            </div>
+            <div className="mt-4 flex flex-wrap gap-4 text-xs font-semibold">
+              <Link href="/security" className="text-[#f4d873] underline-offset-4 hover:underline">Security details</Link>
+              <a href="https://github.com/MikenISATU/Stellar-CrownFi-Ap" target="_blank" rel="noopener noreferrer" className="text-[#f4d873] underline-offset-4 hover:underline">Public source code</a>
             </div>
           </div>
 
@@ -160,6 +118,7 @@ function SiteFooter() {
         <div className="mt-4 flex flex-col items-start justify-between gap-2 text-xs text-[#c7b487] sm:flex-row sm:items-center">
           <span>© 2026 CrownFi · Testnet demo — not for real-money use.</span>
           <span className="flex gap-4">
+            <Link href="/security" className="transition hover:text-white">Security</Link>
             <Link href="/faq#legal" className="transition hover:text-white">Privacy</Link>
             <Link href="/faq#legal" className="transition hover:text-white">Terms</Link>
           </span>

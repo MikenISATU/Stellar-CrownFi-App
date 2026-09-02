@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useSession } from "@/session/SessionProvider";
 import { Icons } from "./icons";
 import { FreighterMark, GoogleMark } from "./brandIcons";
@@ -99,6 +100,11 @@ export function WalletConnect() {
                 </span>
               </PrivyEmailButton>
             )}
+
+            <div className="mx-1 mt-1 rounded-xl border border-[#eadcae] bg-[#fffaf0] px-3 py-2.5 text-xs leading-relaxed text-[#6b5410]">
+              <b>Testnet safety:</b> CrownFi never asks for a recovery phrase or private key. Review every message and transaction in your wallet before approving.{" "}
+              <Link href="/security" onClick={() => setChooser(false)} className="font-semibold underline underline-offset-2">Learn more</Link>
+            </div>
           </div>
         </>
       )}

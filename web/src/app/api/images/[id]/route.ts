@@ -15,6 +15,9 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       headers: {
         "content-type": img.mime,
         "cache-control": "public, max-age=31536000, immutable",
+        "content-security-policy": "default-src 'none'; sandbox",
+        "cross-origin-resource-policy": "same-origin",
+        "x-content-type-options": "nosniff",
       },
     });
   } catch (e) {
