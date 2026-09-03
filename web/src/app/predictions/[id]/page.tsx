@@ -343,7 +343,6 @@ export default function MarketDetail() {
                   </div>
                 )}
                 <button className="btn-ghost w-full" onClick={connect}>{connecting ? "Connecting…" : "Use Freighter wallet"}</button>
-                <p className="text-center text-[11px] leading-relaxed text-[#9a968b]">Google works on iPhone. Freighter works best on desktop.</p>
               </div>
             ) : (
               <div className="mt-4 space-y-3">
