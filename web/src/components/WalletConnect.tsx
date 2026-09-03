@@ -7,6 +7,7 @@ import { FreighterMark, GoogleMark } from "./brandIcons";
 import { short } from "@/lib/format";
 import { PrivyAutoLink } from "./PrivyAutoLink";
 import { PrivyLoginButton } from "./PrivyEmailButton";
+import { isMobileDevice, mobileFreighterConfigured } from "@/wallet/freighterMobile";
 
 const PRIVY_ENABLED = Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID);
 
@@ -16,10 +17,12 @@ export function WalletConnect() {
   const { fan, address, isAdmin, connect, disconnect, connecting } = useSession();
   const [chooser, setChooser] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [mobile, setMobile] = useState(false);
 
   // Let contextual CTAs (notably the mobile prediction card) open the same trusted
   // connection chooser instead of hard-wiring themselves to a desktop-only wallet.
   useEffect(() => {
+    setMobile(isMobileDevice());
     const open = () => setChooser(true);
     window.addEventListener("crownfi:open-connect", open);
     return () => window.removeEventListener("crownfi:open-connect", open);
@@ -91,8 +94,10 @@ export function WalletConnect() {
             >
               <FreighterMark className="h-9 w-9 shrink-0 rounded-lg" />
               <span>
-                <span className="block text-sm font-semibold text-[#23252f]">Freighter</span>
-                <span className="block text-xs text-[#7a7768]">Stellar browser wallet</span>
+                <span className="block text-sm font-semibold text-[#23252f]">{mobile ? "Freighter Mobile" : "Freighter"}</span>
+                <span className="block text-xs text-[#7a7768]">
+                  {mobile ? (mobileFreighterConfigured() ? "Connect securely with WalletConnect" : "Mobile setup unavailable — use Google") : "Stellar browser wallet"}
+                </span>
               </span>
             </button>
 

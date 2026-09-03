@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { connectFreighter, getConnectedAddress, getConnectedNetworkPassphrase, signFanMessage, TESTNET_PASSPHRASE } from "@/wallet/freighter";
+import { connectFreighterMobile, disconnectFreighterMobile, isMobileDevice, signFreighterMobileMessage } from "@/wallet/freighterMobile";
 import { messageFor } from "@/lib/messages";
 
 export type Fan = { id: string; handle: string; walletAddress: string; points: number; authProvider?: string | null };
@@ -38,7 +39,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // Full wallet sign-in: prove control of the address with a Freighter signature,
   // then the server issues an httpOnly fan-session cookie. Returns true on success.
-  async function signInWithAddress(addr: string): Promise<boolean> {
+  async function signInWithAddress(
+    addr: string,
+    signMessage: (message: string, address: string) => Promise<{ signature?: string; error?: string }> = signFanMessage,
+  ): Promise<boolean> {
     // 1) Ask the server for a one-time challenge message.
     let message: string;
     try {
@@ -53,7 +57,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return false;
     }
     // 2) Sign it in Freighter (proves wallet ownership).
-    const signed = await signFanMessage(message, addr);
+    const signed = await signMessage(message, addr);
     if (signed.error || !signed.signature) {
       setError(signed.error ?? "Sign-in signature was cancelled.");
       return false;
@@ -174,6 +178,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   async function connect() {
     setConnecting(true); setError(""); setNeedsInstall(false);
     try {
+      if (isMobileDevice()) {
+        const mobile = await connectFreighterMobile();
+        if (mobile.error || !mobile.address) { setError(mobile.error ?? "Could not connect Freighter Mobile."); return; }
+        await signInWithAddress(mobile.address, (message) => signFreighterMobileMessage(message));
+        return;
+      }
       const res = await connectFreighter();
       if (res.notInstalled) {
         setNeedsInstall(true);
@@ -189,6 +199,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   function disconnect() {
     fetch("/api/fans/logout", { method: "POST" }).catch(() => {});
+    disconnectFreighterMobile().catch(() => {});
     setFan(null); setAddress(null); setError("");
     localStorage.removeItem("crownfi.addr");
   }

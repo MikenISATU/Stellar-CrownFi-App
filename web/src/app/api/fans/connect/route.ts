@@ -45,6 +45,11 @@ export async function POST(req: NextRequest) {
     // Returning wallet → just re-issue the session (no registration cap).
     const existing = await db.fan.findUnique({ where: { walletAddress } });
     if (existing) {
+      if (IS_TESTNET) {
+        await ensureFundedOnTestnet(walletAddress).catch((e) =>
+          console.warn("[api/fans/connect] returning wallet funding skipped:", e?.message ?? e)
+        );
+      }
       const res = NextResponse.json(existing);
       setFanCookie(res, createFanSession(existing.id, walletAddress));
       return res;

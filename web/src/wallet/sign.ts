@@ -2,6 +2,7 @@
 import type { Fan } from "@/session/SessionProvider";
 import { signWithFreighter } from "@/wallet/freighter";
 import { getPrivySigner } from "@/wallet/privySigner";
+import { shouldUseFreighterMobile, signWithFreighterMobile } from "@/wallet/freighterMobile";
 
 // One signing door for every paid flow. Freighter fans approve in the extension popup;
 // Privy (email/Google) fans have no extension — their wallet lives server-side in Privy's
@@ -40,5 +41,6 @@ export async function signTx(
       return { error: e?.message ?? "Could not sign with your account wallet." };
     }
   }
+  if (shouldUseFreighterMobile()) return signWithFreighterMobile(xdr);
   return signWithFreighter(xdr, fan.walletAddress);
 }

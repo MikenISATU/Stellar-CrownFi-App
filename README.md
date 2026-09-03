@@ -18,9 +18,9 @@ Beyond the mainline voting/ticketing/collectibles, this build adds:
 - **Payments admin** — master enable/disable, **maintenance mode**, and a scaffolded **GCash (via PayMongo)** checkout path (disabled until keys are set).
 - **Performance** — in-memory TTL caches on both the client (`web/src/lib/api.ts`) and the hot read APIs (`web/src/lib/serverCache.ts`), so tab navigation doesn't re-hit Postgres.
 
-### Deployed testnet contracts (2026-07)
+### Deployed testnet contracts (updated 2026-09)
 
-All seven Soroban contracts are deployed and live on Stellar testnet:
+The current and legacy Soroban contracts are deployed on Stellar testnet:
 
 | Contract | Purpose | ID |
 |---|---|---|
@@ -30,7 +30,8 @@ All seven Soroban contracts are deployed and live on Stellar testnet:
 | Sale splitter | On-chain USDC payment split; ticket listings **101–104** (Silver/Gold/Diamond/Platinum) registered | `CATCOIVWAVVXBNLPOXBVN3WQ26UNAVLUVSRYBNQWIII75I5QK4YV2KU3` |
 | Test USDC | Mintable demo token everything settles in (faucet source) | `CAE2GXXU4BPLRX5DHLFJKUR7AP5ETPIERGTFNCY7PEFCEL5H3G3RG6LW` |
 | Pageant NFT | Finale-build candidate NFTs: per-candidate IPFS metadata, one mint per wallet, admin-signed mint | `CCONZKTIQHR5UE4AKROICICZ2JSWDAXYBNYDCKDIMRFSIK37PND5PMQW` |
-| Prediction market | Pooled markets: stake / unstake / resolve / claim, 2% fee on winnings | `CDF3R2LUIZJUXCFUBXP62F25M2BYUJT6OT3QYR46MWWBUFEXEAY25POO` |
+| Prediction market V1 — legacy | Original pooled markets. Kept only for existing positions and participant-signed refunds | `CDF3R2LUIZJUXCFUBXP62F25M2BYUJT6OT3QYR46MWWBUFEXEAY25POO` |
+| Prediction market V2 — current | New pooled markets plus safe admin-assisted refunds to each original staker during force deletion | `CATV2RPFRMSVMBEJSXQ4SREUOHZ45WJ2F657IQMVYH3CFKB5XZPBVVX7` |
 
 The prediction **treasury** (fee recipient) is a regular wallet, not a contract: `GC3PXGAWQWHHV6M6AKR3LSZZ7RNYZXASGNJM7BSU3EMWI5KG2R5QSIY3`.
 
@@ -88,7 +89,7 @@ Important framing:
 | Web app | Next.js 15 App Router, React 19, TypeScript, Tailwind CSS |
 | API/backend | Next.js route handlers under `web/src/app/api` |
 | Database | Prisma + Postgres; Supabase is the team-supported hosted Postgres path |
-| Wallet | Freighter for Stellar wallet connection/signing; mock/demo session paths still exist |
+| Wallet | Freighter extension on desktop, Freighter Mobile through WalletConnect, and Privy Google/email |
 | Blockchain | Stellar Testnet + Soroban Rust contracts where `STELLAR_MODE=live` is configured |
 | Contracts | `audit-anchor`, `ticket`, `collectible`, `sale-splitter`, `usdc-test`, `pageant-nft`, `prediction-market` |
 | CI/security | npm audit, TypeScript, Merkle tests, Rust format/tests/audit, secret smoke test, best-effort CodeQL |
@@ -214,6 +215,7 @@ The main environment file is `web/.env`. Start from `web/.env.example`.
 | `STELLAR_RPC_URL` | Soroban RPC endpoint |
 | `NEXT_PUBLIC_STELLAR_NETWORK` | Client-visible Stellar network label |
 | `NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE` | Client-visible Stellar network passphrase |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Reown project ID required for Freighter Mobile on iPhone/Android |
 
 ### Admin authentication
 
@@ -243,6 +245,7 @@ When using `STELLAR_MODE=live`, set deployed Soroban contract IDs:
 | `USDC_TEST_CONTRACT_ID` | Demo/test USDC contract |
 | `PAGEANT_NFT_CONTRACT_ID` | Reusable per-candidate NFT contract (`pageant-nft`) |
 | `PREDICTION_MARKET_CONTRACT_ID` | Prediction-market escrow/settlement contract |
+| `PREDICTION_MARKET_CONTRACT_ID_V2` | Current prediction contract with admin-assisted refunds; new markets use this ID |
 | `PREDICTION_MARKET_TREASURY` | Wallet that receives the 2% market fee |
 | `STELLAR_PLATFORM_SECRET` | Server-only platform signing key for platform-authorized operations |
 | `DEMO_CONTESTANT_PAYOUT` | Demo payout wallet used by listing registration scripts |

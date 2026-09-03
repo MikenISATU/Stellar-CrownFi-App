@@ -6,6 +6,9 @@ import { marketConfigured, buildStakeTx, predictionMarketContractId } from "@/li
 import { createTxIntent } from "@/lib/txIntents";
 import { rateLimit } from "@/lib/ratelimit";
 import { clientIp } from "@/lib/ip";
+import { ensureFundedOnTestnet } from "@/lib/privyServer";
+
+const IS_TESTNET = !["public", "mainnet"].includes((process.env.STELLAR_NETWORK ?? "testnet").toLowerCase());
 
 // STEP 1 of an on-chain prediction: build the unsigned stake() tx for the fan to sign in
 // Freighter (the fan is the source, so their signature authorizes the USDC transfer into escrow).
@@ -32,6 +35,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (!marketConfigured() || market.chainMarketId == null) return NextResponse.json({ mock: true });
 
   try {
+    // A wallet can hold contract USDC while its classic Stellar account still has no
+    // test XLM. It can display a balance but cannot source a transaction until funded.
+    if (IS_TESTNET) await ensureFundedOnTestnet(auth.address);
     const { xdr, txHash } = await buildStakeTx({ contractId: predictionMarketContractId(market.createTxHash), fanAddress: auth.address, marketId: market.chainMarketId, option, amountUsdc: amount });
     const intent = createTxIntent({ kind: "market-stake", fanId: auth.fanId, marketId: id, option, amountUsdc: amount, expectedSource: auth.address, txHash });
     return NextResponse.json({ xdr, intentId: intent.id });
