@@ -13,7 +13,7 @@ export function PrivyWrapper({ children }: { children: ReactNode }) {
     <PrivyProvider
       appId={APP_ID}
       config={{
-        loginMethods: ["email", "google"],
+        loginMethods: ["google", "email"],
         // Stellar wallets are provisioned server-side (chainType "stellar"); no EVM/SOL needed on login.
         embeddedWallets: {
           ethereum: { createOnLogin: "off" },

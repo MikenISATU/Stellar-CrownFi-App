@@ -6,7 +6,7 @@ import { Icons } from "./icons";
 import { FreighterMark, GoogleMark } from "./brandIcons";
 import { short } from "@/lib/format";
 import { PrivyAutoLink } from "./PrivyAutoLink";
-import { PrivyEmailButton } from "./PrivyEmailButton";
+import { PrivyLoginButton } from "./PrivyEmailButton";
 
 const PRIVY_ENABLED = Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID);
 
@@ -88,17 +88,28 @@ export function WalletConnect() {
               </span>
             </button>
 
-            {/* Email / Privy (Google or email) */}
+            {/* Privy social login — Google is the primary passwordless path. */}
             {PRIVY_ENABLED && (
-              <PrivyEmailButton onStart={() => setChooser(false)}>
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white ring-1 ring-[#e7e2d3]">
-                  <GoogleMark />
-                </span>
-                <span>
-                  <span className="block text-sm font-semibold text-[#23252f]">Continue with Email</span>
-                  <span className="block text-xs text-[#7a7768]">Google or email · no wallet needed</span>
-                </span>
-              </PrivyEmailButton>
+              <>
+                <PrivyLoginButton method="google" onStart={() => setChooser(false)}>
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white ring-1 ring-[#e7e2d3]">
+                    <GoogleMark />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-semibold text-[#23252f]">Continue with Google</span>
+                    <span className="block text-xs text-[#7a7768]">Sign in without a browser wallet</span>
+                  </span>
+                </PrivyLoginButton>
+                <PrivyLoginButton method="email" onStart={() => setChooser(false)}>
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#fffaf0] text-[#9b7415] ring-1 ring-[#e7e2d3]">
+                    <Icons.Mail size={18} strokeWidth={1.8} />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-semibold text-[#23252f]">Continue with email</span>
+                    <span className="block text-xs text-[#7a7768]">Use a one-time verification code</span>
+                  </span>
+                </PrivyLoginButton>
+              </>
             )}
 
             <div className="mx-1 mt-1 rounded-xl border border-[#eadcae] bg-[#fffaf0] px-3 py-2.5 text-xs leading-relaxed text-[#6b5410]">

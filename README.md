@@ -176,6 +176,21 @@ DIRECT_URL="postgresql://...pooler.supabase.com:5432/postgres"
 5. After the first deploy, click through one paid flow (faucet → buy a Silver ticket) — Stellar
    testnet calls and the database are shared with local dev, so no reseeding is needed.
 
+### Privy Google sign-in
+
+The app needs `NEXT_PUBLIC_PRIVY_APP_ID`, `PRIVY_APP_ID`, and `PRIVY_APP_SECRET` in Vercel. Google
+OAuth itself is enabled in the Privy dashboard rather than with another Vercel variable:
+
+1. In **Privy → Login methods → Socials**, enable Google. Privy's shared Google credentials are
+   suitable for testing; use your own Google OAuth web client before a production launch.
+2. In **Privy → App settings → Domains**, add the exact production origin, for example
+   `https://stellar-crown-fi-ap-jr77.vercel.app`. Do not add a wildcard Vercel domain.
+3. If the app uses an OAuth redirect allowlist, add the exact HTTPS return URL used by the app.
+   With custom Google credentials, register `https://auth.privy.io/api/v1/oauth/callback` as an
+   authorized redirect URI in Google Cloud.
+4. Test Google sign-in in Chrome or another normal browser. Google may block OAuth inside embedded
+   or in-app browsers even when the integration is configured correctly.
+
 Use [`docs/setup/supabase.md`](docs/setup/supabase.md) for the team’s Supabase path. A self-hosted Postgres instance can also work as long as the Prisma connection strings are set correctly.
 
 ## Environment variables

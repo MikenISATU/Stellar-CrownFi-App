@@ -75,6 +75,9 @@ export const ERROR_MESSAGES: Record<string, string> = {
   not_resolved: "This market hasn’t been resolved yet.",
   nothing_to_claim: "You don’t have a winning payout to claim here.",
   nothing_to_unstake: "You don’t have an active position to cancel here.",
+  market_has_positions: "This market has participant positions and must be kept for settlement and audit history.",
+  market_cancelled_has_positions: "The live market was cancelled on-chain, but it was kept because participants have positions to settle.",
+  market_delete_failed: "We couldn’t delete this market. Please try again.",
   file_too_large: "That image is too large (max 8MB).",
   invalid_file_type: "Please upload a PNG, JPG, WebP, or GIF image.",
 

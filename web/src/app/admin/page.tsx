@@ -60,6 +60,19 @@ export default function AdminPage() {
     const r = await fetch(`/api/markets/${id}/resolve`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, winningOption }) });
     if (r.ok) { flash(`Market ${action}d`); loadMarkets(); } else { const d = await r.json().catch(() => ({})); flash(messageFor(d.error, "Could not update market."), "err"); }
   }
+  async function deleteMarket(id: string): Promise<boolean> {
+    if (!(await ensureAdminSession())) return false;
+    const r = await fetch(`/api/markets/${id}`, { method: "DELETE" });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) {
+      flash("Market deleted");
+      loadMarkets();
+      return true;
+    }
+    flash(messageFor(d.error, "Could not delete market."), "err");
+    loadMarkets();
+    return false;
+  }
 
   function loadAll() {
     getJson("/api/stats", null).then(setStats);
@@ -213,7 +226,7 @@ export default function AdminPage() {
       {reviewingRequest && <RequestModal req={reviewingRequest} onClose={() => setReviewingRequest(null)} onDecide={(id: string, status: string) => { decideRequest(id, status); setReviewingRequest(null); }} />}
       {tab === "pageants" && <Pageants pageants={pageants} locked={pageantsLocked} onUnlock={unlockPageants} onReview={openReview} />}
       {tab === "payments" && <Payments data={settings} locked={settingsLocked} onUnlock={unlockSettings} onSave={saveSettings} />}
-      {tab === "markets" && <Markets markets={markets} onCreate={createMarket} onResolve={resolveMarket} />}
+      {tab === "markets" && <Markets markets={markets} onCreate={createMarket} onResolve={resolveMarket} onDelete={deleteMarket} />}
 
       {reviewing && <ReviewModal pageant={reviewing} onClose={() => setReviewing(null)} onDecide={decide} />}
 
@@ -742,7 +755,7 @@ function LogTable({ title, rows, cols }: { title: string; rows: any[]; cols: str
   );
 }
 
-function Markets({ markets, onCreate, onResolve }: any) {
+function Markets({ markets, onCreate, onResolve, onDelete }: any) {
   const default3d = () => new Date(Date.now() + 72 * 3_600_000).toISOString();
   const [f, setF] = useState<{ question: string; category: string; options: string[]; optionFlags: string[]; closeTime: string; bannerUrl: string }>({ question: "", category: MARKET_CATEGORIES[0].key, options: ["", ""], optionFlags: ["", ""], closeTime: default3d(), bannerUrl: "" });
   const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
@@ -750,6 +763,8 @@ function Markets({ markets, onCreate, onResolve }: any) {
   const setOptionFlag = (i: number, v: string) => setF((p) => ({ ...p, optionFlags: p.optionFlags.map((code, idx) => (idx === i ? v.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2) : code)) }));
   const addOption = () => setF((p) => (p.options.length < 32 ? { ...p, options: [...p.options, ""], optionFlags: [...p.optionFlags, ""] } : p));
   const removeOption = (i: number) => setF((p) => ({ ...p, options: p.options.filter((_, idx) => idx !== i), optionFlags: p.optionFlags.filter((_, idx) => idx !== i) }));
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const choices = f.options.map((label, i) => ({ label: label.trim(), flagCode: f.optionFlags[i] ?? "" })).filter((choice) => choice.label);
   const opts = choices.map((choice) => choice.label);
@@ -761,6 +776,14 @@ function Markets({ markets, onCreate, onResolve }: any) {
     if (!valid) return;
     onCreate({ question: f.question, category: f.category, options: opts, optionFlags, closeTime: f.closeTime, bannerUrl: f.bannerUrl || null });
     setF({ question: "", category: MARKET_CATEGORIES[0].key, options: ["", ""], optionFlags: ["", ""], closeTime: default3d(), bannerUrl: "" });
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    const deleted = await onDelete(deleteTarget.id);
+    setDeleting(false);
+    if (deleted) setDeleteTarget(null);
   }
 
   return (
@@ -800,20 +823,53 @@ function Markets({ markets, onCreate, onResolve }: any) {
               <div className="font-display text-lg text-[#23252f]">{m.question}</div>
               <div className="text-xs text-[#7a7768]">{m.category} · {m.status} · {m.totalPool?.toLocaleString?.() ?? 0} USDC · {m.participants} in</div>
             </div>
-            {(m.status === "open" || m.status === "closed") && (
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {(m.status === "open" || m.status === "closed") && (
+                <>
                 {m.status === "open" && <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => onResolve(m.id, "close")}>Close</button>}
                 <select className="field !w-auto !py-1.5 text-xs" defaultValue="" onChange={(e) => { if (e.target.value !== "") onResolve(m.id, "resolve", Number(e.target.value)); }}>
                   <option value="">Resolve → winner…</option>
                   {(m.options ?? []).map((o: any) => <option key={o.index} value={o.index}>{o.label}</option>)}
                 </select>
                 <button className="btn-ghost !px-3 !py-1.5 text-xs !text-[#9f1239]" onClick={() => onResolve(m.id, "cancel")}>Cancel</button>
-              </div>
-            )}
-            {m.status === "resolved" && <span className="tag-on">Resolved · {m.options?.[m.winningOption]?.label}</span>}
+                </>
+              )}
+              {m.status === "resolved" && <span className="tag-on">Resolved · {m.options?.[m.winningOption]?.label}</span>}
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#ebd0d0] px-3 py-1.5 text-xs font-semibold text-[#9f1239] transition hover:bg-[#fff1f2]"
+                onClick={() => setDeleteTarget(m)}
+              >
+                <Icons.Trash size={13} strokeWidth={1.8} /> Delete
+              </button>
+            </div>
           </div>
         </div>
       ))}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-[#17140d]/45 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget && !deleting) setDeleteTarget(null); }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="delete-market-title" className="glass w-full max-w-md p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="eyebrow mb-2 text-[#9f1239]">Permanent action</div>
+                <h2 id="delete-market-title" className="text-xl font-semibold text-[#23252f]">Delete this market?</h2>
+              </div>
+              <button type="button" aria-label="Close" disabled={deleting} onClick={() => setDeleteTarget(null)} className="rounded-lg p-1.5 text-[#7a7768] hover:bg-[#f3eee2] disabled:opacity-50"><Icons.X size={18} /></button>
+            </div>
+            <p className="mt-3 text-sm font-medium text-[#3a3f52]">{deleteTarget.question}</p>
+            <p className="mt-2 text-sm leading-relaxed text-[#6c6a61]">
+              CrownFi will permanently remove the database record. An open on-chain market is cancelled first, but its ledger history cannot be deleted. Markets with participant positions are protected and will not be removed.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" className="btn-ghost" disabled={deleting} onClick={() => setDeleteTarget(null)}>Keep market</button>
+              <button type="button" className="inline-flex items-center gap-2 rounded-lg bg-[#9f1239] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#881337] disabled:opacity-60" disabled={deleting} onClick={confirmDelete}>
+                <Icons.Trash size={15} /> {deleting ? "Deleting…" : "Delete market"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

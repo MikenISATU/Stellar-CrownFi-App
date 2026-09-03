@@ -1,6 +1,6 @@
 // Central icon set. Replaces emoji used as structural icons (skill rule: no emoji as icons).
 // Install first:  npm i lucide-react
-import { Vote, ShieldCheck, Ticket, Gem, User, Crown, Lock, Menu, ChevronLeft, ChevronRight, ChevronDown, Wallet, Check, X, RefreshCw, Sun, Moon, Search } from "lucide-react";
+import { Vote, ShieldCheck, Ticket, Gem, User, Crown, Lock, Menu, ChevronLeft, ChevronRight, ChevronDown, Wallet, Check, X, RefreshCw, Sun, Moon, Search, Mail, Trash2 } from "lucide-react";
 
 export const Icons = {
   Vote,            // was ♛ (tab: Vote)
@@ -16,6 +16,8 @@ export const Icons = {
   Sun,
   Moon,
   Search,
+  Mail,
+  Trash: Trash2,
   Check,
   X,
   Prev: ChevronLeft,

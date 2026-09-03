@@ -26,11 +26,11 @@ export function PrivyAutoLink() {
         await refresh();
       } else {
         const d = await res.json().catch(() => ({}));
-        setErr(messageFor(d.error, "Could not finish email sign-in."));
+        setErr(messageFor(d.error, "Could not finish sign-in."));
         await logout().catch(() => {}); // reset so the user can retry cleanly
       }
     } catch {
-      setErr("Could not finish email sign-in.");
+      setErr("Could not finish sign-in.");
     }
   }, [getAccessToken, refresh, logout]);
 
