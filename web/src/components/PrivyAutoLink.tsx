@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useUser } from "@privy-io/react-auth";
 import { useSession } from "@/session/SessionProvider";
 import { messageFor } from "@/lib/messages";
 
@@ -9,6 +9,7 @@ import { messageFor } from "@/lib/messages";
 // connect chooser so it keeps running after the chooser closes. Renders only an error, if any.
 export function PrivyAutoLink() {
   const { authenticated, logout, getAccessToken } = usePrivy();
+  const { refreshUser } = useUser();
   const { fan, refresh } = useSession();
   const [err, setErr] = useState("");
   const attempted = useRef(false);
@@ -23,6 +24,10 @@ export function PrivyAutoLink() {
         body: JSON.stringify({ token }),
       });
       if (res.ok) {
+        // The server may have provisioned this user's Stellar wallet during the exchange.
+        // Refresh Privy's client-side user before a paid action calls useSignRawHash;
+        // without this, first-time Google users had to reload before their first stake.
+        await refreshUser().catch(() => {});
         await refresh();
       } else {
         const d = await res.json().catch(() => ({}));
@@ -32,7 +37,7 @@ export function PrivyAutoLink() {
     } catch {
       setErr("Could not finish sign-in.");
     }
-  }, [getAccessToken, refresh, logout]);
+  }, [getAccessToken, refresh, refreshUser, logout]);
 
   useEffect(() => {
     if (!authenticated) { attempted.current = false; return; }

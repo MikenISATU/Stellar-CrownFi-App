@@ -9,6 +9,9 @@ import { estimateReward, PLATFORM_FEE_PCT } from "@/lib/markets";
 import { MarketView, CATEGORY_LABEL, statusBadge, timeLeft } from "@/components/MarketCard";
 import { OddsChart } from "@/components/OddsChart";
 import { Flag } from "@/components/Flag";
+import { GoogleMark } from "@/components/brandIcons";
+
+const PRIVY_ENABLED = Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID);
 
 type Detail = MarketView & {
   activity: { option: number; amount: number; createdAt: string; status: string }[];
@@ -25,6 +28,8 @@ export default function MarketDetail() {
   const [pick, setPick] = useState<number | null>(null);
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
+  const [stakeStage, setStakeStage] = useState("");
+  const [stakeError, setStakeError] = useState("");
   const [toast, setToast] = useState({ msg: "", tone: "ok" as "ok" | "err" });
   const [tab, setTab] = useState<"activity" | "rules">("activity");
   const flash = (msg: string, tone: "ok" | "err" = "ok") => { setToast({ msg, tone }); setTimeout(() => setToast({ msg: "", tone: "ok" }), 3200); };
@@ -52,40 +57,47 @@ export default function MarketDetail() {
   useEffect(() => { load(); const iv = setInterval(() => { if (document.visibilityState === "visible") load(); }, 10000); return () => clearInterval(iv); }, [load]);
 
   const reset = () => { setAmount(""); setPick(null); };
+  const openConnectChooser = () => window.dispatchEvent(new Event("crownfi:open-connect"));
 
   async function predict() {
-    if (!fan) { flash("Connect your wallet to predict.", "err"); return; }
-    if (pick == null || !(Number(amount) > 0)) { flash("Pick an option and an amount.", "err"); return; }
+    if (!fan) { setStakeError("Sign in to place your prediction."); return; }
+    if (pick == null || !(Number(amount) > 0)) { setStakeError("Pick an outcome and enter an amount."); return; }
+    if (balance != null && Number(amount) > balance) { setStakeError("Your test USDC balance is too low. Top up, then try again."); return; }
+    setStakeError("");
+    setStakeStage("Preparing your position…");
     setBusy(true);
     try {
       // 1) Prepare the stake (server tells us if this market is on-chain or a mock).
       const pr = await fetch(`/api/markets/${id}/prepare-stake`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ option: pick, amount: Number(amount) }) });
       const pd = await pr.json().catch(() => ({}));
-      if (!pr.ok) { flash(stakeErr(pd.error), "err"); return; }
+      if (!pr.ok) { setStakeError(stakeErr(pd.error)); return; }
 
       // Off-chain / mock market → record directly.
       if (pd.mock) {
         const r = await fetch(`/api/markets/${id}/predict`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ option: pick, amount: Number(amount) }) });
         const d = await r.json().catch(() => ({}));
         if (r.ok) { flash(`Prediction placed! +${d.pointsAwarded ?? 0} points`); reset(); load(); refreshBalance(); }
-        else flash(messageFor(d.error, "Could not place prediction."), "err");
+        else setStakeError(messageFor(d.error, "Could not place prediction."));
         return;
       }
 
-      // 2) Sign the stake in Freighter (authorizes the USDC transfer into escrow).
+      // 2) Sign with the connected wallet (Privy on iPhone/Google, or Freighter on desktop).
+      setStakeStage(fan.authProvider === "privy" ? "Approve with your Google wallet…" : "Approve in Freighter…");
       const { signTx } = await import("@/wallet/sign");
       const signed = await signTx(pd.xdr, fan);
-      if (signed.error || !signed.signedXdr) { flash(messageFor(signed.error, "You cancelled the wallet signature."), "err"); return; }
+      if (signed.error || !signed.signedXdr) { setStakeError(messageFor(signed.error, "The wallet signature was not completed.")); return; }
 
       // 3) Submit + record on-chain.
+      setStakeStage("Confirming on Stellar…");
       const cr = await fetch(`/api/markets/${id}/confirm-stake`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ signedXdr: signed.signedXdr, intentId: pd.intentId }) });
       const cd = await cr.json().catch(() => ({}));
       if (cr.ok) { flash(`Staked ${amount} USDC on-chain! +${cd.pointsAwarded ?? 0} points`); reset(); load(); refreshBalance(); }
-      else flash(messageFor(cd.error, "Could not confirm your stake."), "err");
+      else setStakeError(messageFor(cd.error, "Could not confirm your position on Stellar."));
     } catch {
-      flash("Something went wrong. Please try again.", "err");
+      setStakeError("The connection was interrupted. Please try again.");
     } finally {
       setBusy(false);
+      setStakeStage("");
     }
   }
 
@@ -176,6 +188,7 @@ export default function MarketDetail() {
   const amt = Number(amount) > 0 ? Number(amount) : 0;
   const grossIfWin = pick != null && amt > 0 ? (amt * (m.totalPool + amt)) / ((m.options[pick]?.pool ?? 0) + amt) : 0;
   const feeIfWin = Math.round(Math.max(0, grossIfWin - amt) * (PLATFORM_FEE_PCT / 100) * 100) / 100;
+  const insufficientBalance = balance != null && amt > balance;
 
   return (
     <div className="space-y-6">
@@ -189,26 +202,26 @@ export default function MarketDetail() {
         </div>
       )}
 
+      {/* Keep market identity above the order card on every screen size. */}
+      <div>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="rounded-full bg-[#faf0d2] px-2.5 py-0.5 font-semibold text-[#8a6d1f]">{CATEGORY_LABEL[m.category] ?? m.category}</span>
+          <span className={`rounded-full px-2.5 py-0.5 font-semibold ${badge.cls}`}>{badge.label}</span>
+        </div>
+        <h1 className="mt-3 text-balance text-3xl font-semibold leading-tight tracking-tight text-[#23252f] sm:text-4xl">{m.question}</h1>
+        {closeAt && m.status === "open" && (
+          <div className="mt-2 text-xs leading-relaxed text-[#7a7768]">
+            Closes {closeAt.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} local
+            <span className="hidden sm:inline"> · {closeAt.toISOString().slice(0, 16).replace("T", " ")} UTC</span> · {timeLeft(m.endsInMs)}
+          </div>
+        )}
+      </div>
+
       <div className="grid items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
         {/* ══ LEFT: the market ══════════════════════════════ */}
-        <div className="space-y-6">
-          {/* Header */}
-          <div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="rounded-full bg-[#faf0d2] px-2.5 py-0.5 font-semibold text-[#8a6d1f]">{CATEGORY_LABEL[m.category] ?? m.category}</span>
-              <span className={`rounded-full px-2.5 py-0.5 font-semibold ${badge.cls}`}>{badge.label}</span>
-            </div>
-            <h1 className="mt-3 tracking-tight text-3xl font-semibold leading-tight text-[#23252f] sm:text-4xl">{m.question}</h1>
-            {closeAt && m.status === "open" && (
-              <div className="mt-2 text-xs text-[#7a7768]">
-                Closes {closeAt.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} local
-                · {closeAt.toISOString().slice(0, 16).replace("T", " ")} UTC · {timeLeft(m.endsInMs)}
-              </div>
-            )}
-          </div>
-
+        <div className="order-2 space-y-6 lg:order-1">
           {/* Market-says headline + chart */}
-          <div className="glass p-5">
+          <div className="glass p-4 sm:p-5">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-[#9a968b]">Market says</div>
@@ -302,8 +315,8 @@ export default function MarketDetail() {
         </div>
 
         {/* ══ RIGHT: the order card (sticky) ════════════════ */}
-        <div className="space-y-4 lg:sticky lg:top-24">
-          <div className="card-gold p-5">
+        <div className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24">
+          <div className="card-gold p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <h2 className="tracking-tight text-lg font-semibold text-[#23252f]">Place a prediction</h2>
               <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${badge.cls}`}>{badge.label}</span>
@@ -314,17 +327,44 @@ export default function MarketDetail() {
                 {m.status === "resolved" ? "This market has been resolved — see the result above." : m.status === "cancelled" ? "This market was cancelled; stakes are refunded in full." : "This market is closed for new predictions."}
               </p>
             ) : !fan ? (
-              <div className="mt-4">
-                <button className="btn-gold w-full" onClick={connect}>{connecting ? "Connecting…" : "Connect wallet to predict"}</button>
-                <p className="mt-2 text-center text-[11px] text-[#9a968b]">Freighter, or Google/email — browse freely either way.</p>
+              <div className="mt-4 space-y-2.5">
+                {PRIVY_ENABLED && (
+                  <button type="button" onClick={openConnectChooser} className="btn-gold min-h-[52px] w-full !justify-start !px-3 text-left">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white ring-1 ring-[#e7e2d3]"><GoogleMark /></span>
+                    <span>
+                      <span className="block text-sm font-semibold text-[#ffd277]">Continue with Google</span>
+                      <span className="block text-xs font-normal text-[#f3e7c3]">Recommended for iPhone and mobile</span>
+                    </span>
+                  </button>
+                )}
+                {PRIVY_ENABLED && (
+                  <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider text-[#9a968b]">
+                    <span className="h-px flex-1 bg-[#e7e2d3]" />or<span className="h-px flex-1 bg-[#e7e2d3]" />
+                  </div>
+                )}
+                <button className="btn-ghost w-full" onClick={connect}>{connecting ? "Connecting…" : "Use Freighter wallet"}</button>
+                <p className="text-center text-[11px] leading-relaxed text-[#9a968b]">Google creates a secure Stellar wallet for you. Freighter works best on desktop.</p>
               </div>
             ) : (
               <div className="mt-4 space-y-3">
-                {/* Outcome pills */}
-                <div className="flex flex-wrap gap-1.5">
+                {/* A native select stays compact and reliable for long markets on iPhone. */}
+                <label className="block sm:hidden">
+                  <span className="mb-1.5 block text-xs font-semibold text-[#5f6172]">Choose an outcome</span>
+                  <select
+                    className="field !text-base"
+                    value={pick ?? ""}
+                    onChange={(e) => { setPick(e.target.value === "" ? null : Number(e.target.value)); setStakeError(""); }}
+                  >
+                    <option value="">Select an outcome…</option>
+                    {m.options.map((o) => <option key={o.index} value={o.index}>{o.flagCode ? `${o.flagCode} · ` : ""}{o.label} · {o.percent}%</option>)}
+                  </select>
+                </label>
+
+                {/* Outcome pills on wider screens. */}
+                <div className="hidden flex-wrap gap-1.5 sm:flex">
                   {m.options.map((o) => (
-                    <button key={o.index} onClick={() => setPick(o.index)}
-                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${pick === o.index ? "border-[#a97f16]/50 bg-gradient-to-b from-[#e4c358] to-[#c39a2c] text-[#1a1f35]" : "border-[#e7e2d3] bg-white text-[#5f6172] hover:border-[#c9a227]"}`}>
+                    <button key={o.index} onClick={() => { setPick(o.index); setStakeError(""); }}
+                      className={`flex min-h-[40px] items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${pick === o.index ? "border-[#a97f16]/50 bg-gradient-to-b from-[#e4c358] to-[#c39a2c] text-[#1a1f35]" : "border-[#e7e2d3] bg-white text-[#5f6172] hover:border-[#c9a227]"}`}>
                       <Flag sash={o.flagCode} className="!h-3.5 !w-5" />{o.label} <span className="tabular-nums opacity-80">{o.percent}%</span>
                     </button>
                   ))}
@@ -333,16 +373,16 @@ export default function MarketDetail() {
                 {/* Amount */}
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <input className="field !pr-14 tabular-nums" type="number" min="0" inputMode="decimal" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label="Stake amount in USDC" />
+                    <input className="field !pr-14 !text-base tabular-nums sm:!text-sm" type="number" min="0.01" step="0.01" inputMode="decimal" placeholder="0.00" value={amount} onChange={(e) => { setAmount(e.target.value); setStakeError(""); }} aria-label="Stake amount in USDC" />
                     <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#9a968b]">USDC</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="grid grid-cols-3 gap-2">
                   {[10, 50, 100].map((v) => (
-                    <button key={v} type="button" onClick={() => setAmount(String(v))} className="rounded-lg border border-[#e7e2d3] bg-white px-2.5 py-1 text-xs font-semibold tabular-nums text-[#5f6172] transition hover:border-[#c9a227]">+{v}</button>
+                    <button key={v} type="button" onClick={() => { setAmount(String(v)); setStakeError(""); }} className="min-h-[44px] rounded-lg border border-[#e7e2d3] bg-white px-2.5 py-1 text-xs font-semibold tabular-nums text-[#5f6172] transition hover:border-[#c9a227]">{v} USDC</button>
                   ))}
-                  <button type="button" onClick={getTestUsdc} disabled={busy} className="ml-auto text-xs text-[#a97f16] hover:underline disabled:opacity-50">Get test USDC</button>
                 </div>
+                <button type="button" onClick={getTestUsdc} disabled={busy} className="min-h-[44px] w-full rounded-lg border border-[#d9c986] bg-[#fffaf0] px-3 py-2 text-xs font-semibold text-[#8a6d1f] transition hover:border-[#c9a227] disabled:opacity-50">Get 50 test USDC</button>
                 {address && (
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="text-[#9a968b]">Wallet balance</span>
@@ -362,8 +402,15 @@ export default function MarketDetail() {
                   </div>
                 )}
 
-                <button className="btn-gold w-full !py-3" disabled={busy || pick == null || !(amt > 0)} onClick={predict}>
-                  {busy ? "Signing…" : pick == null ? "Select an outcome" : `Stake ${amt > 0 ? amt.toLocaleString() + " USDC on " : "on "}${m.options[pick]?.label}`}
+                {stakeError && (
+                  <div role="alert" aria-live="polite" className="rounded-xl border border-[#efc9d1] bg-[#fff1f2] px-3 py-2.5 text-xs leading-relaxed text-[#9f1239]">
+                    {stakeError}
+                  </div>
+                )}
+                {insufficientBalance && !stakeError && <p className="text-xs font-medium text-[#9f1239]">This amount is above your wallet balance.</p>}
+
+                <button className="btn-gold min-h-[52px] w-full !px-4 !py-3" disabled={busy || pick == null || !(amt > 0) || insufficientBalance} onClick={predict}>
+                  {busy ? stakeStage || "Working…" : pick == null ? "Select an outcome" : `Stake ${amt > 0 ? amt.toLocaleString() + " USDC on " : "on "}${m.options[pick]?.label}`}
                 </button>
                 {pick != null && amt > 0 && (
                   <p className="text-center text-[11px] text-[#9a968b]">Uses up to {amt.toLocaleString()} USDC from your wallet when you sign.</p>
@@ -378,9 +425,9 @@ export default function MarketDetail() {
               <div className="eyebrow mb-2">Your positions</div>
               <div className="space-y-2">
                 {m.mine.map((p, i) => (
-                  <div key={i} className="flex items-center justify-between gap-2 rounded-lg surface-soft px-3 py-2 text-sm">
-                    <span className="text-[#23252f]">{m.options[p.option]?.label ?? `Option ${p.option}`}</span>
-                    <span className="flex items-center gap-2 text-[#5f6172]">
+                  <div key={i} className="flex flex-col gap-2 rounded-lg surface-soft px-3 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between">
+                    <span className="min-w-0 text-[#23252f]">{m.options[p.option]?.label ?? `Option ${p.option}`}</span>
+                    <span className="flex flex-wrap items-center gap-2 text-[#5f6172] sm:justify-end">
                       {p.amount} USDC · <span className={p.status === "won" ? "text-emerald-700" : p.status === "lost" ? "text-[#9f1239]" : "text-[#a97f16]"}>{p.status}</span>
                       {canPredict && p.status === "active" && (
                         <button disabled={busy} onClick={() => cancelPosition(p.option)} className="rounded-md border border-[#e7d0d0] px-2 py-0.5 text-xs text-[#9f1239] hover:bg-[#fbe9ef] disabled:opacity-50">Cancel</button>

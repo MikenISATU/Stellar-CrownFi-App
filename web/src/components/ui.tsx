@@ -58,7 +58,7 @@ export function CountUp({ to, suffix = "" }: { to: number; suffix?: string }) {
 export function Toast({ msg, tone = "ok" }: { msg: string; tone?: "ok" | "err" }) {
   if (!msg) return null;
   return (
-    <div className={`fixed bottom-24 left-1/2 z-50 -translate-x-1/2 animate-floatUp rounded-full px-4 py-2 text-sm shadow-glass sm:bottom-8 ${tone === "ok" ? "bg-emerald text-ink" : "bg-ruby text-white"}`}>
+    <div className={`fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 animate-floatUp rounded-xl px-4 py-3 text-center text-sm shadow-glass sm:bottom-8 sm:w-auto sm:rounded-full sm:py-2 ${tone === "ok" ? "bg-emerald text-ink" : "bg-ruby text-white"}`}>
       {msg}
     </div>
   );

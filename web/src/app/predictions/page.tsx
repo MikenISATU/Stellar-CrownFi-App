@@ -76,21 +76,21 @@ export default function PredictionsLanding() {
           )}
         </div>
         {fan ? (
-          <button className="btn-gold" onClick={() => setShowCreate((s) => !s)}>{showCreate ? "Close" : "Create a prediction"}</button>
+          <button className="btn-gold w-full sm:w-auto" onClick={() => setShowCreate((s) => !s)}>{showCreate ? "Close" : "Create a prediction"}</button>
         ) : (
-          <button className="btn-ghost" onClick={connect}>{connecting ? "Connecting…" : "Connect to create"}</button>
+          <button className="btn-ghost w-full sm:w-auto" onClick={connect}>{connecting ? "Connecting…" : "Connect to create"}</button>
         )}
       </header>
 
       {/* How it works — numbered walk-through, reference-style */}
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 no-scrollbar sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
         {[
           { n: "01", t: "Pick a market", d: "Each pageant stage gets a market. The percentages are live odds — the crowd's money talking." },
           { n: "02", t: "Stake USDC", d: "Back an outcome with test USDC. You approve every stake in your own wallet; funds sit in the contract." },
           { n: "03", t: "Watch it move", d: "Odds shift as fans take sides. Change your mind? Cancel any position before close for a full refund." },
           { n: "04", t: "Claim winnings", d: "When the result is resolved on-chain, winners split the whole pool. Fee is 2% of profit only." },
         ].map((s) => (
-          <div key={s.n} className="card-gold p-5">
+          <div key={s.n} className="card-gold w-[82vw] max-w-sm shrink-0 snap-start p-5 sm:w-auto sm:max-w-none">
             <div className="font-display text-sm font-semibold tabular-nums text-[#a97f16]">{s.n}</div>
             <div className="mt-1 font-display text-2xl font-semibold text-[#23252f]">{s.t}</div>
             <p className="mt-2 text-xs leading-relaxed text-[#5f6172]">{s.d}</p>
@@ -114,13 +114,13 @@ export default function PredictionsLanding() {
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-0.5 no-scrollbar">
           {STATUSES.map((s) => (
             <button key={s.key} onClick={() => setStatus(s.key)} aria-pressed={status === s.key} className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${status === s.key ? "border-[#a97f16]/50 bg-[rgba(0,0,0,0.842)] text-[#ffd277]" : "border-[#e7e2d3] bg-white text-[#5f6172] hover:border-[#c9a227]"}`}>
               {s.label}
             </button>
           ))}
-          {markets !== null && <span className="ml-auto text-xs tabular-nums text-[#9a968b]">{filtered.length} market{filtered.length === 1 ? "" : "s"}</span>}
+          {markets !== null && <span className="ml-auto shrink-0 text-xs tabular-nums text-[#9a968b]">{filtered.length} market{filtered.length === 1 ? "" : "s"}</span>}
         </div>
       </div>
 
@@ -251,8 +251,8 @@ function CreateMarket({ onCreated, onError }: { onCreated: () => void; onError: 
         {options.map((opt, i) => (
           <div key={i} className="flex items-center gap-2">
             <span className="w-5 shrink-0 text-right text-xs tabular-nums text-[#9a968b]">{i + 1}</span>
-            <input className="field" placeholder={`Outcome ${i + 1}`} value={opt} onChange={(e) => setOption(i, e.target.value)} />
-            <label className="relative flex w-[4.75rem] shrink-0 items-center">
+            <input className="field min-w-0 !text-base sm:!text-sm" placeholder={`Outcome ${i + 1}`} value={opt} onChange={(e) => setOption(i, e.target.value)} />
+            <label className="relative flex w-[4.25rem] shrink-0 items-center sm:w-[4.75rem]">
               <span className="pointer-events-none absolute left-2.5 z-10 flex h-4 w-6 items-center justify-center"><Flag sash={optionFlags[i]} className="!h-4 !w-6" /></span>
               <input className="field !pl-10 !pr-2 uppercase" aria-label={`Country code for outcome ${i + 1}`} title="Optional ISO country code, such as PH" maxLength={2} placeholder="Flag" value={optionFlags[i]} onChange={(e) => setOptionFlag(i, e.target.value)} />
             </label>

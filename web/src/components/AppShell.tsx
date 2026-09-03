@@ -55,7 +55,7 @@ const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] 
 
 const TABS = [
   { href: "/vote", label: "Vote", Icon: Icons.Vote },
-  { href: "/verify", label: "Verify", Icon: Icons.Verify },
+  { href: "/predictions", label: "Predict", Icon: Icons.Predict },
   { href: "/tickets", label: "Tickets", Icon: Icons.Tickets },
   { href: "/contestants", label: "Collect", Icon: Icons.Collect },
   { href: "/me", label: "Me", Icon: Icons.Me },
@@ -181,7 +181,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const links = isAdmin ? [...USER_LINKS, { href: "/admin", label: "Admin" }] : USER_LINKS;
 
   return (
-    <div className="min-h-screen pb-20 sm:pb-0">
+    <div className="min-h-screen pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-0">
       <header className="sticky top-3 z-40 px-3 sm:top-4 sm:px-6">
         <div className="mx-auto max-w-7xl">
           <div className="flex items-center justify-between rounded-2xl border border-[#d4af37]/55 bg-gradient-to-r from-[#3b2512]/95 via-[#6b471d]/95 to-[#3b2512]/95 px-4 py-2.5 shadow-[0_14px_34px_-18px_rgba(59,37,18,0.8)] backdrop-blur-xl sm:px-6">
@@ -291,7 +291,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <SiteFooter />
 
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#d4af37]/55 bg-[#3b2512]/95 backdrop-blur-xl sm:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#d4af37]/55 bg-[#3b2512]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl sm:hidden">
         <div className="mx-auto flex max-w-md items-stretch justify-between px-2">
           {TABS.map(({ href, label, Icon }) => {
             const active = path === href;

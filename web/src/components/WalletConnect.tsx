@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "@/session/SessionProvider";
 import { Icons } from "./icons";
@@ -16,6 +16,14 @@ export function WalletConnect() {
   const { fan, address, isAdmin, connect, disconnect, connecting } = useSession();
   const [chooser, setChooser] = useState(false);
   const [menu, setMenu] = useState(false);
+
+  // Let contextual CTAs (notably the mobile prediction card) open the same trusted
+  // connection chooser instead of hard-wiring themselves to a desktop-only wallet.
+  useEffect(() => {
+    const open = () => setChooser(true);
+    window.addEventListener("crownfi:open-connect", open);
+    return () => window.removeEventListener("crownfi:open-connect", open);
+  }, []);
 
   // ── Connected: account chip + menu ──
   if (address) {
