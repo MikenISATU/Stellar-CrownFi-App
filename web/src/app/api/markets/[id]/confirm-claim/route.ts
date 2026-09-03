@@ -21,12 +21,18 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   try {
+    const market = await db.predictionMarket.findUnique({ where: { id }, select: { status: true } });
+    if (!market || !["resolved", "cancelled"].includes(market.status)) {
+      return NextResponse.json({ error: "market_changed" }, { status: 409 });
+    }
     const submit = await submitSignedXdr(signedXdr, { source: auth.address, txHash: intent.txHash });
     await db.prediction.updateMany({
-      where: { marketId: id, fanId: auth.fanId, status: "won" },
+      where: market.status === "cancelled"
+        ? { marketId: id, fanId: auth.fanId, status: { in: ["active", "lost"] } }
+        : { marketId: id, fanId: auth.fanId, status: "won" },
       data: { status: "claimed", claimTxHash: submit.txHash },
     });
-    return NextResponse.json({ ok: true, txHash: submit.txHash });
+    return NextResponse.json({ ok: true, txHash: submit.txHash, mode: market.status === "cancelled" ? "refund" : "claim" });
   } catch (e: any) {
     console.error("[api/markets/confirm-claim] failed:", e);
     return NextResponse.json({ error: e?.message ?? "confirm_failed" }, { status: 500 });

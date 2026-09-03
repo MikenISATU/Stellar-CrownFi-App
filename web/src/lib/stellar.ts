@@ -398,6 +398,21 @@ export async function buildClaimTx(params: { fanAddress: string; marketId: numbe
   return { xdr: tx.toXDR(), txHash: Buffer.from(tx.hash()).toString("hex") };
 }
 
+// Fan-signed (prepare): refund every position belonging to a fan on a cancelled market.
+export async function buildMarketRefundTx(params: { fanAddress: string; marketId: number }): Promise<{ xdr: string; txHash: string }> {
+  const { sdk, srv, passphrase } = await server();
+  const contractId = requireEnv("PREDICTION_MARKET_CONTRACT_ID");
+  const source = await srv.getAccount(params.fanAddress);
+  const contract = new sdk.Contract(contractId);
+  const op = contract.call("refund", new sdk.Address(params.fanAddress).toScVal(), sdk.nativeToScVal(params.marketId, { type: "u32" }));
+  let tx = new sdk.TransactionBuilder(source, { fee: sdk.BASE_FEE, networkPassphrase: passphrase })
+    .addOperation(op)
+    .setTimeout(180)
+    .build();
+  tx = await srv.prepareTransaction(tx);
+  return { xdr: tx.toXDR(), txHash: Buffer.from(tx.hash()).toString("hex") };
+}
+
 // STEP 2 of a purchase (or admin anchor): submit the Freighter-signed XDR and wait for confirmation.
 export async function submitSignedXdr(
   signedXdr: string,

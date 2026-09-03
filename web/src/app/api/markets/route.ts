@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { readAdminSession } from "@/lib/adminAuth";
 import { readFanSession } from "@/lib/fanAuth";
-import { computeMarketView } from "@/lib/markets";
+import { computeMarketView, parseMarketInput } from "@/lib/markets";
 import { rateLimit } from "@/lib/ratelimit";
 import { clientIp } from "@/lib/ip";
 import { marketConfigured, createMarketOnchain } from "@/lib/stellar";
@@ -21,12 +21,19 @@ export async function GET(req: NextRequest) {
   if (q) where.question = { contains: q, mode: "insensitive" };
 
   try {
+    const admin = readAdminSession(req);
+    const fan = readFanSession(req);
     const rows = await db.predictionMarket.findMany({
       where,
       orderBy: { createdAt: "desc" },
       include: { predictions: { select: { option: true, amount: true, fanId: true } } },
     });
-    return NextResponse.json(rows.map((m) => computeMarketView(m, m.predictions)));
+    return NextResponse.json(rows.map((m) => {
+      const isCreator = Boolean(fan && m.creatorFanId === fan.fanId);
+      const canManage = Boolean(admin || isCreator);
+      const hasPositions = m.predictions.length > 0;
+      return { ...computeMarketView(m, m.predictions), isCreator, canManage, canEdit: canManage && m.status === "open" && !hasPositions, hasPositions };
+    }));
   } catch {
     return NextResponse.json([]);
   }
@@ -44,20 +51,9 @@ export async function POST(req: NextRequest) {
   }
 
   const b = await req.json().catch(() => null);
-  const question = String(b?.question ?? "").trim().slice(0, 300);
-  const category = String(b?.category ?? "").trim().slice(0, 40);
-  const options: string[] = Array.isArray(b?.options) ? b.options.map((x: any) => String(x).trim().slice(0, 120)).filter(Boolean) : [];
-  const optionFlags: (string | null)[] = Array.isArray(b?.optionFlags)
-    ? b.optionFlags.slice(0, options.length).map((x: any) => {
-        const code = String(x ?? "").trim().toUpperCase();
-        return /^[A-Z]{2}$/.test(code) ? code : null;
-      })
-    : [];
-  const closeTime = b?.closeTime ? new Date(b.closeTime) : null;
-
-  if (!question || !category) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
-  if (options.length < 2 || options.length > 32) return NextResponse.json({ error: "invalid_options" }, { status: 400 });
-  if (!closeTime || isNaN(closeTime.getTime()) || closeTime.getTime() <= Date.now()) return NextResponse.json({ error: "invalid_close_time" }, { status: 400 });
+  const parsed = parseMarketInput(b);
+  if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  const { question, category, options, optionFlags, closeTime, pageantId, bannerUrl } = parsed.value;
 
   try {
     // Per-user cap on open community markets.
@@ -74,8 +70,8 @@ export async function POST(req: NextRequest) {
         optionFlagsJson: optionFlags.some(Boolean) ? JSON.stringify(options.map((_, i) => optionFlags[i] ?? null)) : null,
         closeTime,
         creatorFanId: fan ? fan.fanId : null, // null = official
-        pageantId: b?.pageantId ? String(b.pageantId) : null,
-        bannerUrl: b?.bannerUrl ? String(b.bannerUrl).slice(0, 400) : null,
+        pageantId,
+        bannerUrl,
       },
     });
 

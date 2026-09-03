@@ -6,8 +6,9 @@ import { Flag } from "@/components/Flag";
 export { CATEGORY_LABEL };
 
 export type MarketView = {
-  id: string; category: string; question: string; status: string; live: boolean; official: boolean;
-  endsInMs: number; winningOption: number | null; bannerUrl: string | null;
+  id: string; pageantId: string | null; category: string; question: string; status: string; live: boolean; official: boolean;
+  isCreator: boolean; canManage: boolean; canEdit: boolean; hasPositions: boolean;
+  closeTime: string; endsInMs: number; winningOption: number | null; bannerUrl: string | null;
   options: { index: number; label: string; flagCode: string | null; pool: number; percent: number }[];
   totalPool: number; participants: number;
 };
@@ -50,7 +51,7 @@ export function MarketCard({ m }: { m: MarketView }) {
         <div className="absolute right-2 top-2 flex items-center gap-1.5">
           {m.official
             ? <span className="rounded-full bg-[#1a1f35] px-2 py-0.5 text-[11px] font-semibold text-[#f4e29a]">★ Official</span>
-            : <span className="rounded-full bg-white/85 px-2 py-0.5 text-[11px] font-semibold text-[#5f6172]">Community</span>}
+            : <span className="rounded-full bg-white/85 px-2 py-0.5 text-[11px] font-semibold text-[#5f6172]">{m.isCreator ? "Your market" : "Community"}</span>}
           <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${badge.cls}`}>
             {m.live && <span className="inline-block h-1.5 w-1.5 rounded-full bg-current motion-safe:animate-pulse" />}
             {badge.label}

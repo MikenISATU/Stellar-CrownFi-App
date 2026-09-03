@@ -19,6 +19,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const market = await db.predictionMarket.findUnique({ where: { id } });
   if (!market) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  if (market.status !== "open" || market.closeTime.getTime() <= Date.now()) {
+    return NextResponse.json({ error: "market_closed" }, { status: 409 });
+  }
 
   const intent = consumeTxIntent(intentId);
   if (!intent || intent.kind !== "market-stake" || intent.fanId !== auth.fanId || intent.marketId !== id) {

@@ -8,6 +8,15 @@ export const PLATFORM_FEE_BPS = Number(process.env.NEXT_PUBLIC_PLATFORM_FEE_BPS 
 export const PLATFORM_FEE_PCT = PLATFORM_FEE_BPS / 100; // for display, e.g. 2
 
 export type MarketOptionView = { index: number; label: string; flagCode: string | null; pool: number; percent: number };
+export type MarketInput = {
+  question: string;
+  category: string;
+  options: string[];
+  optionFlags: (string | null)[];
+  closeTime: Date;
+  pageantId: string | null;
+  bannerUrl: string | null;
+};
 export type MarketView = {
   id: string;
   pageantId: string | null;
@@ -60,6 +69,38 @@ export function parseOptionFlags(optionFlagsJson?: string | null): (string | nul
   } catch {
     return [];
   }
+}
+
+export function parseMarketInput(body: any): { value: MarketInput } | { error: string } {
+  const question = String(body?.question ?? "").trim().slice(0, 300);
+  const category = String(body?.category ?? "").trim().slice(0, 40);
+  const options: string[] = Array.isArray(body?.options)
+    ? body.options.map((value: any) => String(value).trim().slice(0, 120)).filter(Boolean)
+    : [];
+  const rawFlags: (string | null)[] = Array.isArray(body?.optionFlags)
+    ? body.optionFlags.slice(0, options.length).map((value: any) => {
+        const code = String(value ?? "").trim().toUpperCase();
+        return /^[A-Z]{2}$/.test(code) ? code : null;
+      })
+    : [];
+  const closeTime = body?.closeTime ? new Date(body.closeTime) : null;
+
+  if (question.length < 3 || !category) return { error: "missing_fields" };
+  if (options.length < 2 || options.length > 32) return { error: "invalid_options" };
+  if (new Set(options.map((option) => option.toLocaleLowerCase())).size !== options.length) return { error: "duplicate_options" };
+  if (!closeTime || Number.isNaN(closeTime.getTime()) || closeTime.getTime() <= Date.now()) return { error: "invalid_close_time" };
+
+  return {
+    value: {
+      question,
+      category,
+      options,
+      optionFlags: options.map((_, index) => rawFlags[index] ?? null),
+      closeTime,
+      pageantId: body?.pageantId ? String(body.pageantId).slice(0, 100) : null,
+      bannerUrl: body?.bannerUrl ? String(body.bannerUrl).slice(0, 400) : null,
+    },
+  };
 }
 
 export function computeMarketView(

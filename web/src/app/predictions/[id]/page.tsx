@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "@/session/SessionProvider";
 import { Toast } from "@/components/ui";
@@ -10,6 +10,7 @@ import { MarketView, CATEGORY_LABEL, statusBadge, timeLeft } from "@/components/
 import { OddsChart } from "@/components/OddsChart";
 import { Flag } from "@/components/Flag";
 import { GoogleMark } from "@/components/brandIcons";
+import { MarketForm } from "@/components/MarketForm";
 
 const PRIVY_ENABLED = Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID);
 
@@ -21,7 +22,8 @@ type Detail = MarketView & {
 
 export default function MarketDetail() {
   const { id } = useParams<{ id: string }>();
-  const { fan, address, connect, connecting } = useSession();
+  const router = useRouter();
+  const { fan, address, isAdmin, connect, connecting } = useSession();
   const [m, setM] = useState<Detail | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
@@ -32,6 +34,9 @@ export default function MarketDetail() {
   const [stakeError, setStakeError] = useState("");
   const [toast, setToast] = useState({ msg: "", tone: "ok" as "ok" | "err" });
   const [tab, setTab] = useState<"activity" | "rules">("activity");
+  const [showEdit, setShowEdit] = useState(false);
+  const [manageAction, setManageAction] = useState<"cancel" | "delete" | null>(null);
+  const [manageBusy, setManageBusy] = useState(false);
   const flash = (msg: string, tone: "ok" | "err" = "ok") => { setToast({ msg, tone }); setTimeout(() => setToast({ msg: "", tone: "ok" }), 3200); };
 
   const load = useCallback(async () => {
@@ -42,7 +47,7 @@ export default function MarketDetail() {
       setM(await r.json());
       setState("ready");
     } catch { setState("error"); }
-  }, [id]);
+  }, [id, fan?.id, isAdmin]);
 
   // Same wallet balance the Collect and Tickets tabs show, so stakes are never a guess.
   const refreshBalance = useCallback(async () => {
@@ -152,18 +157,50 @@ export default function MarketDetail() {
     try {
       const pr = await fetch(`/api/markets/${id}/prepare-claim`, { method: "POST" });
       const pd = await pr.json().catch(() => ({}));
-      if (!pr.ok) { flash(messageFor(pd.error, "Could not start your claim."), "err"); return; }
+      if (!pr.ok) { flash(messageFor(pd.error, m?.status === "cancelled" ? "Could not start your refund." : "Could not start your claim."), "err"); return; }
       const { signTx } = await import("@/wallet/sign");
       const signed = await signTx(pd.xdr, fan);
       if (signed.error || !signed.signedXdr) { flash(messageFor(signed.error, "You cancelled the wallet signature."), "err"); return; }
       const cr = await fetch(`/api/markets/${id}/confirm-claim`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ signedXdr: signed.signedXdr, intentId: pd.intentId }) });
       const cd = await cr.json().catch(() => ({}));
-      if (cr.ok) { flash("Winnings claimed to your wallet! 🎉"); load(); refreshBalance(); }
-      else flash(messageFor(cd.error, "Could not claim your winnings."), "err");
+      if (cr.ok) { flash(m?.status === "cancelled" ? "Full refund returned to your wallet." : "Winnings claimed to your wallet! 🎉"); load(); refreshBalance(); }
+      else flash(messageFor(cd.error, m?.status === "cancelled" ? "Could not confirm your refund." : "Could not claim your winnings."), "err");
     } catch {
       flash("Something went wrong. Please try again.", "err");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function confirmManageAction() {
+    if (!manageAction || manageBusy) return;
+    setManageBusy(true);
+    try {
+      const response = manageAction === "delete"
+        ? await fetch(`/api/markets/${id}`, { method: "DELETE" })
+        : await fetch(`/api/markets/${id}/resolve`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ action: "cancel" }),
+          });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        flash(messageFor(data.error, `Could not ${manageAction} this market.`), "err");
+        setManageAction(null);
+        await load();
+        return;
+      }
+      if (manageAction === "delete") {
+        router.push("/predictions");
+        return;
+      }
+      setManageAction(null);
+      flash("Market cancelled. Participants can now claim full refunds.");
+      await load();
+    } catch {
+      flash("The connection was interrupted. Please try again.", "err");
+    } finally {
+      setManageBusy(false);
     }
   }
 
@@ -215,7 +252,56 @@ export default function MarketDetail() {
             <span className="hidden sm:inline"> · {closeAt.toISOString().slice(0, 16).replace("T", " ")} UTC</span> · {timeLeft(m.endsInMs)}
           </div>
         )}
+        {m.canManage && (
+          <div className="mt-4">
+            <div className="flex flex-wrap gap-2">
+              {m.canEdit && (
+                <button type="button" onClick={() => { setShowEdit((value) => !value); setManageAction(null); }} className="btn-ghost min-h-[44px] flex-1 sm:flex-none">
+                  {showEdit ? "Close editor" : "Edit market"}
+                </button>
+              )}
+              {!m.hasPositions && !["editing", "deleting", "cancelling"].includes(m.status) && (
+                <button type="button" onClick={() => { setManageAction("delete"); setShowEdit(false); }} className="min-h-[44px] flex-1 rounded-lg border border-[#e7c3c8] bg-white px-4 py-2 text-sm font-semibold text-[#9f1239] transition hover:bg-[#fff1f2] sm:flex-none">
+                  Delete market
+                </button>
+              )}
+              {m.hasPositions && ["open", "closed"].includes(m.status) && (
+                <button type="button" onClick={() => { setManageAction("cancel"); setShowEdit(false); }} className="min-h-[44px] flex-1 rounded-lg border border-[#e7c3c8] bg-white px-4 py-2 text-sm font-semibold text-[#9f1239] transition hover:bg-[#fff1f2] sm:flex-none">
+                  Cancel market
+                </button>
+              )}
+            </div>
+            {m.hasPositions && ["open", "closed"].includes(m.status) && <p className="mt-2 text-xs text-[#7a7768]">Market terms are locked after the first position. You can cancel the market, but it must remain visible for refunds and audit history.</p>}
+          </div>
+        )}
       </div>
+
+      {showEdit && m.canEdit && (
+        <MarketForm
+          marketId={m.id}
+          initial={{ pageantId: m.pageantId, question: m.question, category: m.category, options: m.options, closeTime: m.closeTime, bannerUrl: m.bannerUrl }}
+          onSaved={() => { setShowEdit(false); flash("Market updated on-chain."); load(); }}
+          onCancel={() => setShowEdit(false)}
+          onError={(message) => { flash(message, "err"); load(); }}
+        />
+      )}
+
+      {manageAction && (
+        <div role="dialog" aria-modal="true" aria-labelledby="manage-market-title" className="rounded-2xl border border-[#e7c3c8] bg-[#fff8f7] p-4 sm:p-5">
+          <h2 id="manage-market-title" className="text-lg font-semibold text-[#23252f]">{manageAction === "delete" ? "Delete this market?" : "Cancel this market?"}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-[#5f6172]">
+            {manageAction === "delete"
+              ? "This empty market will be permanently removed. Its cancelled Stellar ledger record remains public and cannot be erased."
+              : "New positions will stop immediately. The market stays in the audit history and every participant can claim their full USDC refund."}
+          </p>
+          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" disabled={manageBusy} onClick={() => setManageAction(null)} className="btn-ghost min-h-[44px]">Keep market</button>
+            <button type="button" disabled={manageBusy} onClick={confirmManageAction} className="min-h-[44px] rounded-lg bg-[#8f2335] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#741b2a] disabled:opacity-50">
+              {manageBusy ? "Working on Stellar…" : manageAction === "delete" ? "Delete permanently" : "Cancel and enable refunds"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
         {/* ══ LEFT: the market ══════════════════════════════ */}
@@ -307,7 +393,7 @@ export default function MarketDetail() {
               <div className="mt-3 space-y-3 rounded-xl border border-[#eee6d3] bg-white p-4 text-xs leading-relaxed text-[#5f6172]">
                 <p><b className="text-[#23252f]">How it settles.</b> Each outcome is a USDC pool; the percentages are the pools' shares. When the segment ends, the pageant resolves the winner in a public on-chain transaction, and correct predictions split the entire pool pro-rata. A {PLATFORM_FEE_PCT}% fee applies to <b>profit only</b> — your stake is never charged, and a sole winner pays no fee.</p>
                 <p><b className="text-[#23252f]">Before close.</b> You can cancel any position while the market is open and your full stake returns to your wallet.</p>
-                <p><b className="text-[#23252f]">If this market is cancelled.</b> Every stake is refunded in full — no fee, no exceptions. Funds sit in the smart contract at all times, never with CrownFi.</p>
+                <p><b className="text-[#23252f]">If this market is cancelled.</b> Every participant can claim their stake back in full — no fee, no exceptions. Funds sit in the smart contract at all times, never with CrownFi.</p>
                 <p><b className="text-[#23252f]">Source.</b> The official pageant result as announced on the night, mirrored on-chain by the market resolver.</p>
               </div>
             )}
@@ -324,7 +410,7 @@ export default function MarketDetail() {
 
             {!canPredict ? (
               <p className="mt-3 text-sm text-[#7a7768]">
-                {m.status === "resolved" ? "This market has been resolved — see the result above." : m.status === "cancelled" ? "This market was cancelled; stakes are refunded in full." : "This market is closed for new predictions."}
+                {m.status === "resolved" ? "This market has been resolved — see the result above." : m.status === "cancelled" ? "This market was cancelled. Participants can claim a full refund below." : "This market is closed for new predictions."}
               </p>
             ) : !fan ? (
               <div className="mt-4 space-y-2.5">
@@ -438,8 +524,11 @@ export default function MarketDetail() {
               {m.status === "resolved" && m.mine.some((p) => p.status === "won") && (
                 <button className="btn-gold mt-3 w-full" disabled={busy} onClick={claim}>{busy ? "Claiming…" : "Claim winnings"}</button>
               )}
-              {m.status === "resolved" && m.mine.some((p) => p.status === "claimed") && !m.mine.some((p) => p.status === "won") && (
-                <div className="mt-3 rounded-lg bg-[#e1f5ee] px-3 py-2 text-center text-sm font-semibold text-[#0f6e56]">Winnings claimed ✓</div>
+              {m.status === "cancelled" && m.mine.some((p) => ["active", "lost"].includes(p.status)) && (
+                <button className="btn-gold mt-3 w-full" disabled={busy} onClick={claim}>{busy ? "Preparing refund…" : "Claim full refund"}</button>
+              )}
+              {["resolved", "cancelled"].includes(m.status) && m.mine.some((p) => p.status === "claimed") && !m.mine.some((p) => p.status === "won") && (
+                <div className="mt-3 rounded-lg bg-[#e1f5ee] px-3 py-2 text-center text-sm font-semibold text-[#0f6e56]">{m.status === "cancelled" ? "Refund claimed ✓" : "Winnings claimed ✓"}</div>
               )}
             </div>
           )}
