@@ -304,23 +304,57 @@ export async function buildAnchorTx(params: {
 // the unsigned tx here (buyer is the source, so their signature authorizes the transfer)
 // and submit it via submitSignedXdr() after signing.
 
-export const marketConfigured = () => (MODE === "live") && Boolean(process.env.PREDICTION_MARKET_CONTRACT_ID);
+const PREDICTION_V2_TESTNET_ID = "CATV2RPFRMSVMBEJSXQ4SREUOHZ45WJ2F657IQMVYH3CFKB5XZPBVVX7";
+const MARKET_REF_PREFIX = "pm2:";
+
+function activePredictionContractId(): string {
+  const configured = process.env.PREDICTION_MARKET_CONTRACT_ID_V2;
+  if (configured) return configured;
+  const network = (process.env.STELLAR_NETWORK ?? "testnet").toLowerCase();
+  if (network !== "public" && network !== "mainnet") return PREDICTION_V2_TESTNET_ID;
+  return requireEnv("PREDICTION_MARKET_CONTRACT_ID");
+}
+
+// Existing DB rows predate per-market contract ids. Their create tx is a plain hash and
+// therefore remains bound to the legacy contract. V2 rows encode the contract alongside
+// the creation hash without requiring a production database migration.
+export function predictionMarketContractId(createTxHash?: string | null): string {
+  if (createTxHash?.startsWith(MARKET_REF_PREFIX)) {
+    const contractId = createTxHash.slice(MARKET_REF_PREFIX.length).split(":", 1)[0];
+    if (/^C[A-Z2-7]{55}$/.test(contractId)) return contractId;
+  }
+  return requireEnv("PREDICTION_MARKET_CONTRACT_ID");
+}
+
+export function encodePredictionMarketCreateRef(contractId: string, txHash: string): string {
+  return `${MARKET_REF_PREFIX}${contractId}:${txHash}`;
+}
+
+export function supportsAdminForceRefund(createTxHash?: string | null): boolean {
+  return Boolean(createTxHash?.startsWith(MARKET_REF_PREFIX));
+}
+
+export const marketConfigured = () => MODE === "live" && Boolean(
+  process.env.PREDICTION_MARKET_CONTRACT_ID_V2 ||
+  process.env.PREDICTION_MARKET_CONTRACT_ID ||
+  PREDICTION_V2_TESTNET_ID,
+);
 
 // Admin (platform-signed): create a market on-chain; returns its u32 id.
-export async function createMarketOnchain(params: { question: string; category: string; numOptions: number; closeUnix: number }): Promise<{ marketId: number; txHash: string }> {
-  const contractId = requireEnv("PREDICTION_MARKET_CONTRACT_ID");
+export async function createMarketOnchain(params: { question: string; category: string; numOptions: number; closeUnix: number }): Promise<{ marketId: number; txHash: string; contractId: string }> {
+  const contractId = activePredictionContractId();
   const { txHash, returnValue } = await invoke(contractId, "create_market", (sdk) => [
     sdk.nativeToScVal(params.question.slice(0, 200), { type: "string" }),
     sdk.nativeToScVal(params.category.slice(0, 40), { type: "string" }),
     sdk.nativeToScVal(params.numOptions, { type: "u32" }),
     sdk.nativeToScVal(BigInt(Math.floor(params.closeUnix)), { type: "u64" }),
   ]);
-  return { marketId: Number(returnValue), txHash };
+  return { marketId: Number(returnValue), txHash, contractId };
 }
 
 // Admin (platform-signed): resolve to a winning option.
-export async function resolveMarketOnchain(params: { marketId: number; winningOption: number }): Promise<{ txHash: string }> {
-  const contractId = requireEnv("PREDICTION_MARKET_CONTRACT_ID");
+export async function resolveMarketOnchain(params: { contractId?: string; marketId: number; winningOption: number }): Promise<{ txHash: string }> {
+  const contractId = params.contractId ?? activePredictionContractId();
   const { txHash } = await invoke(contractId, "resolve_market", (sdk) => [
     sdk.nativeToScVal(params.marketId, { type: "u32" }),
     sdk.nativeToScVal(params.winningOption, { type: "u32" }),
@@ -329,22 +363,32 @@ export async function resolveMarketOnchain(params: { marketId: number; winningOp
 }
 
 // Admin (platform-signed): close (stops new stakes) or cancel (enables refunds).
-export async function closeMarketOnchain(params: { marketId: number }): Promise<{ txHash: string }> {
-  const contractId = requireEnv("PREDICTION_MARKET_CONTRACT_ID");
+export async function closeMarketOnchain(params: { contractId?: string; marketId: number }): Promise<{ txHash: string }> {
+  const contractId = params.contractId ?? activePredictionContractId();
   const { txHash } = await invoke(contractId, "close_market", (sdk) => [sdk.nativeToScVal(params.marketId, { type: "u32" })]);
   return { txHash };
 }
-export async function cancelMarketOnchain(params: { marketId: number }): Promise<{ txHash: string }> {
-  const contractId = requireEnv("PREDICTION_MARKET_CONTRACT_ID");
+export async function cancelMarketOnchain(params: { contractId?: string; marketId: number }): Promise<{ txHash: string }> {
+  const contractId = params.contractId ?? activePredictionContractId();
   const { txHash } = await invoke(contractId, "cancel_market", (sdk) => [sdk.nativeToScVal(params.marketId, { type: "u32" })]);
+  return { txHash };
+}
+
+// V2 only: after cancellation, the contract returns all of `fanAddress`'s escrow
+// directly to that same wallet. The platform cannot redirect or retain the funds.
+export async function forceRefundMarketOnchain(params: { contractId: string; fanAddress: string; marketId: number }): Promise<{ txHash: string }> {
+  const { txHash } = await invoke(params.contractId, "force_refund", (sdk) => [
+    new sdk.Address(params.fanAddress).toScVal(),
+    sdk.nativeToScVal(params.marketId, { type: "u32" }),
+  ]);
   return { txHash };
 }
 
 // Fan-signed (prepare): stake `amountUsdc` on an option. The fan is the tx source, so their
 // Freighter signature authorizes the USDC transfer into the contract's escrow.
-export async function buildStakeTx(params: { fanAddress: string; marketId: number; option: number; amountUsdc: number }): Promise<{ xdr: string; txHash: string }> {
+export async function buildStakeTx(params: { contractId?: string; fanAddress: string; marketId: number; option: number; amountUsdc: number }): Promise<{ xdr: string; txHash: string }> {
   const { sdk, srv, passphrase } = await server();
-  const contractId = requireEnv("PREDICTION_MARKET_CONTRACT_ID");
+  const contractId = params.contractId ?? activePredictionContractId();
   const source = await srv.getAccount(params.fanAddress);
   const contract = new sdk.Contract(contractId);
   const op = contract.call(
@@ -364,9 +408,9 @@ export async function buildStakeTx(params: { fanAddress: string; marketId: numbe
 
 // Fan-signed (prepare): cancel a position — withdraw the fan's full stake on an option while
 // the market is still open. Refunds the escrowed USDC.
-export async function buildUnstakeTx(params: { fanAddress: string; marketId: number; option: number }): Promise<{ xdr: string; txHash: string }> {
+export async function buildUnstakeTx(params: { contractId?: string; fanAddress: string; marketId: number; option: number }): Promise<{ xdr: string; txHash: string }> {
   const { sdk, srv, passphrase } = await server();
-  const contractId = requireEnv("PREDICTION_MARKET_CONTRACT_ID");
+  const contractId = params.contractId ?? activePredictionContractId();
   const source = await srv.getAccount(params.fanAddress);
   const contract = new sdk.Contract(contractId);
   const op = contract.call(
@@ -384,9 +428,9 @@ export async function buildUnstakeTx(params: { fanAddress: string; marketId: num
 }
 
 // Fan-signed (prepare): claim winnings from a resolved market (pro-rata minus fee).
-export async function buildClaimTx(params: { fanAddress: string; marketId: number }): Promise<{ xdr: string; txHash: string }> {
+export async function buildClaimTx(params: { contractId?: string; fanAddress: string; marketId: number }): Promise<{ xdr: string; txHash: string }> {
   const { sdk, srv, passphrase } = await server();
-  const contractId = requireEnv("PREDICTION_MARKET_CONTRACT_ID");
+  const contractId = params.contractId ?? activePredictionContractId();
   const source = await srv.getAccount(params.fanAddress);
   const contract = new sdk.Contract(contractId);
   const op = contract.call("claim", new sdk.Address(params.fanAddress).toScVal(), sdk.nativeToScVal(params.marketId, { type: "u32" }));
@@ -399,9 +443,9 @@ export async function buildClaimTx(params: { fanAddress: string; marketId: numbe
 }
 
 // Fan-signed (prepare): refund every position belonging to a fan on a cancelled market.
-export async function buildMarketRefundTx(params: { fanAddress: string; marketId: number }): Promise<{ xdr: string; txHash: string }> {
+export async function buildMarketRefundTx(params: { contractId?: string; fanAddress: string; marketId: number }): Promise<{ xdr: string; txHash: string }> {
   const { sdk, srv, passphrase } = await server();
-  const contractId = requireEnv("PREDICTION_MARKET_CONTRACT_ID");
+  const contractId = params.contractId ?? activePredictionContractId();
   const source = await srv.getAccount(params.fanAddress);
   const contract = new sdk.Contract(contractId);
   const op = contract.call("refund", new sdk.Address(params.fanAddress).toScVal(), sdk.nativeToScVal(params.marketId, { type: "u32" }));

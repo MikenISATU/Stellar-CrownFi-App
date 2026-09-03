@@ -7,6 +7,7 @@ Deployment runbook for the CrownFi platform contracts: the reusable **pageant-nf
 | Contract | ID |
 |---|---|
 | Prediction Market | `CDF3R2LUIZJUXCFUBXP62F25M2BYUJT6OT3QYR46MWWBUFEXEAY25POO` |
+| Prediction Market V2 (admin-assisted refunds) | `CATV2RPFRMSVMBEJSXQ4SREUOHZ45WJ2F657IQMVYH3CFKB5XZPBVVX7` |
 | Pageant NFT | `CCONZKTIQHR5UE4AKROICICZ2JSWDAXYBNYDCKDIMRFSIK37PND5PMQW` |
 | Prediction treasury | `GC3PXGAWQWHHV6M6AKR3LSZZ7RNYZXASGNJM7BSU3EMWI5KG2R5QSIY3` |
 
@@ -164,4 +165,6 @@ stellar contract invoke --id C... --source alice --network testnet -- \
   resolve_market --market_id 1 --winning_option 2
 ```
 
-Store `PREDICTION_MARKET_CONTRACT_ID` in `web/.env` for the app to read.
+Keep `PREDICTION_MARKET_CONTRACT_ID` for legacy markets and store the refund-capable
+contract as `PREDICTION_MARKET_CONTRACT_ID_V2`. New market rows encode the contract id
+with their creation transaction, so v1 positions continue using v1 while new markets use v2.

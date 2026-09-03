@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireFan } from "@/lib/fanAuth";
-import { marketConfigured, buildUnstakeTx } from "@/lib/stellar";
+import { marketConfigured, buildUnstakeTx, predictionMarketContractId } from "@/lib/stellar";
 import { createTxIntent } from "@/lib/txIntents";
 
 // STEP 1 of cancelling a position: build the unsigned unstake() tx for the fan to sign.
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   try {
-    const { xdr, txHash } = await buildUnstakeTx({ fanAddress: auth.address, marketId: market.chainMarketId, option });
+    const { xdr, txHash } = await buildUnstakeTx({ contractId: predictionMarketContractId(market.createTxHash), fanAddress: auth.address, marketId: market.chainMarketId, option });
     const intent = createTxIntent({ kind: "market-unstake", fanId: auth.fanId, marketId: id, option, expectedSource: auth.address, txHash });
     return NextResponse.json({ xdr, intentId: intent.id });
   } catch (e: any) {

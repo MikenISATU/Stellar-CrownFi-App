@@ -129,6 +129,21 @@ fn cancel_then_refund() {
 }
 
 #[test]
+fn admin_force_refund_returns_funds_to_original_staker() {
+    let f = setup(0);
+    let mid = f.client.create_market(&String::from_str(&f.e, "Q"), &String::from_str(&f.e, "overall"), &2, &2_000);
+    let alice = Address::generate(&f.e);
+    fund(&f, &alice, 1_000);
+    f.client.stake(&alice, &mid, &0, &125);
+    f.client.cancel_market(&mid);
+
+    assert_eq!(f.client.force_refund(&alice, &mid), 125);
+    assert_eq!(f.token.balance(&alice), 1_000);
+    assert!(f.client.try_force_refund(&alice, &mid).is_err());
+    assert!(f.client.try_refund(&alice, &mid).is_err());
+}
+
+#[test]
 fn unstake_cancels_position_and_refunds() {
     let f = setup(0);
     let mid = f.client.create_market(&String::from_str(&f.e, "Q"), &String::from_str(&f.e, "swimsuit"), &3, &2_000);

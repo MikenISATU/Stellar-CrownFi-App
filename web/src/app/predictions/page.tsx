@@ -18,7 +18,7 @@ const STATUSES = [
 ];
 
 export default function PredictionsLanding() {
-  const { fan, connect, connecting } = useSession();
+  const { fan } = useSession();
   const [markets, setMarkets] = useState<MarketView[] | null>(null);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
@@ -26,6 +26,7 @@ export default function PredictionsLanding() {
   const [showCreate, setShowCreate] = useState(false);
   const [toast, setToast] = useState({ msg: "", tone: "ok" as "ok" | "err" });
   const flash = (msg: string, tone: "ok" | "err" = "ok") => { setToast({ msg, tone }); setTimeout(() => setToast({ msg: "", tone: "ok" }), 3200); };
+  const openConnectChooser = () => window.dispatchEvent(new Event("crownfi:open-connect"));
 
   function load() {
     fetch("/api/markets", { cache: "no-store" }).then((r) => r.json()).then((d) => setMarkets(Array.isArray(d) ? d : [])).catch(() => setMarkets([]));
@@ -77,7 +78,7 @@ export default function PredictionsLanding() {
         {fan ? (
           <button className="btn-gold w-full sm:w-auto" onClick={() => setShowCreate((s) => !s)}>{showCreate ? "Close" : "Create a prediction"}</button>
         ) : (
-          <button className="btn-ghost w-full sm:w-auto" onClick={connect}>{connecting ? "Connecting…" : "Connect to create"}</button>
+          <button className="btn-ghost w-full sm:w-auto" onClick={openConnectChooser}>Sign in to create</button>
         )}
       </header>
 

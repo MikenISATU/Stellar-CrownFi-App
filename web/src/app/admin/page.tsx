@@ -60,18 +60,20 @@ export default function AdminPage() {
     const r = await fetch(`/api/markets/${id}/resolve`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, winningOption }) });
     if (r.ok) { flash(`Market ${action}d`); loadMarkets(); } else { const d = await r.json().catch(() => ({})); flash(messageFor(d.error, "Could not update market."), "err"); }
   }
-  async function deleteMarket(id: string): Promise<boolean> {
+  async function deleteMarket(id: string, force = false): Promise<boolean> {
     if (!(await ensureAdminSession())) return false;
-    const r = await fetch(`/api/markets/${id}`, { method: "DELETE" });
+    const r = await fetch(`/api/markets/${id}${force ? "?force=1" : ""}`, { method: "DELETE" });
     const d = await r.json().catch(() => ({}));
     if (r.ok) {
-      flash("Market deleted");
+      flash(d.autoRefunded > 0 ? `Market deleted — ${d.autoRefunded} wallet refund${d.autoRefunded === 1 ? "" : "s"} sent automatically.` : "Market deleted");
       loadMarkets();
       return true;
     }
     flash(messageFor(d.error, "Could not delete market."), "err");
     loadMarkets();
-    return false;
+    // A legacy market with positions is intentionally retained after cancellation so
+    // users can authorize their refunds. The requested destructive action is safely queued.
+    return Boolean(d.cancelled);
   }
 
   function loadAll() {
@@ -781,7 +783,7 @@ function Markets({ markets, onCreate, onResolve, onDelete }: any) {
   async function confirmDelete() {
     if (!deleteTarget || deleting) return;
     setDeleting(true);
-    const deleted = await onDelete(deleteTarget.id);
+    const deleted = await onDelete(deleteTarget.id, (deleteTarget.participants ?? 0) > 0);
     setDeleting(false);
     if (deleted) setDeleteTarget(null);
   }
@@ -852,19 +854,21 @@ function Markets({ markets, onCreate, onResolve, onDelete }: any) {
           <div role="dialog" aria-modal="true" aria-labelledby="delete-market-title" className="glass w-full max-w-md p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="eyebrow mb-2 text-[#9f1239]">Permanent action</div>
-                <h2 id="delete-market-title" className="text-xl font-semibold text-[#23252f]">Delete this market?</h2>
+                <div className="eyebrow mb-2 text-[#9f1239]">Admin force action</div>
+                <h2 id="delete-market-title" className="text-xl font-semibold text-[#23252f]">{deleteTarget.participants > 0 ? "Force delete and refund?" : "Delete this market?"}</h2>
               </div>
               <button type="button" aria-label="Close" disabled={deleting} onClick={() => setDeleteTarget(null)} className="rounded-lg p-1.5 text-[#7a7768] hover:bg-[#f3eee2] disabled:opacity-50"><Icons.X size={18} /></button>
             </div>
             <p className="mt-3 text-sm font-medium text-[#3a3f52]">{deleteTarget.question}</p>
             <p className="mt-2 text-sm leading-relaxed text-[#6c6a61]">
-              CrownFi will permanently remove the database record. An open on-chain market is cancelled first, but its ledger history cannot be deleted. Markets with participant positions are protected and will not be removed.
+              {deleteTarget.participants > 0
+                ? "CrownFi will stop this market on Stellar first. V2 stakes are returned directly to their original wallets before deletion. Earlier markets stay cancelled and visible until each participant signs their refund, so no escrow can be lost."
+                : "CrownFi will permanently remove this empty database record. An open on-chain market is cancelled first, while its immutable ledger history remains public."}
             </p>
             <div className="mt-5 flex justify-end gap-2">
               <button type="button" className="btn-ghost" disabled={deleting} onClick={() => setDeleteTarget(null)}>Keep market</button>
               <button type="button" className="inline-flex items-center gap-2 rounded-lg bg-[#9f1239] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#881337] disabled:opacity-60" disabled={deleting} onClick={confirmDelete}>
-                <Icons.Trash size={15} /> {deleting ? "Deleting…" : "Delete market"}
+                <Icons.Trash size={15} /> {deleting ? "Refunding safely…" : deleteTarget.participants > 0 ? "Force delete & refund" : "Delete market"}
               </button>
             </div>
           </div>

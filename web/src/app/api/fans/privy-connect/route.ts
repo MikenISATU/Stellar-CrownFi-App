@@ -4,8 +4,12 @@ import { isLikelyStellarAddress } from "@/lib/adminAuth";
 import { createFanSession, setFanCookie } from "@/lib/fanAuth";
 import { clientIpHash } from "@/lib/ip";
 import { privyConfigured, resolvePrivyStellarIdentity, ensureFundedOnTestnet } from "@/lib/privyServer";
+import { mintTestUsdc } from "@/lib/stellar";
 
-const MAX_ACCOUNTS_PER_IP = Number(process.env.MAX_ACCOUNTS_PER_IP ?? "2");
+// Shared event/office Wi-Fi is normal for CrownFi. Keep a high anti-bot ceiling instead
+// of blocking the third legitimate attendee behind the same public IP.
+const MAX_ACCOUNTS_PER_IP = Math.max(20, Number(process.env.MAX_ACCOUNTS_PER_IP ?? "20") || 20);
+const IS_TESTNET = !["public", "mainnet"].includes((process.env.STELLAR_NETWORK ?? "testnet").toLowerCase());
 
 // Web2 sign-in via Privy: the client sends its Privy access token; the server verifies it
 // (proof of identity), provisions the user's Stellar wallet, links/creates the Fan, and
@@ -37,9 +41,11 @@ export async function POST(req: NextRequest) {
   // Testnet: the Privy wallet must exist ON-CHAIN before it can source any transaction.
   // Idempotent (friendbot once, then a no-op) — covers new signups AND pre-existing accounts
   // created before funding was wired in. Best-effort: login should not fail if friendbot is down.
-  await ensureFundedOnTestnet(address).catch((e) =>
-    console.warn("[api/fans/privy-connect] funding skipped:", e?.message ?? e)
-  );
+  if (IS_TESTNET) {
+    await ensureFundedOnTestnet(address).catch((e) =>
+      console.warn("[api/fans/privy-connect] account funding skipped:", e?.message ?? e)
+    );
+  }
 
   const ipHash = clientIpHash(req);
 
@@ -72,6 +78,11 @@ export async function POST(req: NextRequest) {
     const fan = await db.fan.create({
       data: { handle: `fan_${address.slice(-6)}`, walletAddress: address, email, registrationIpHash: ipHash, authProvider: "privy" },
     });
+    if (IS_TESTNET) {
+      await mintTestUsdc({ toAddress: address, amountUsdc: 50 }).catch((e) =>
+        console.warn("[api/fans/privy-connect] starter USDC skipped:", e?.message ?? e)
+      );
+    }
     const res = NextResponse.json(fan);
     setFanCookie(res, createFanSession(fan.id, address));
     return res;

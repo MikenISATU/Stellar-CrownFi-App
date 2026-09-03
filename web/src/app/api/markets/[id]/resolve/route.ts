@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { readAdminSession } from "@/lib/adminAuth";
 import { readFanSession } from "@/lib/fanAuth";
 import { parseOptions } from "@/lib/markets";
-import { marketConfigured, resolveMarketOnchain, closeMarketOnchain, cancelMarketOnchain } from "@/lib/stellar";
+import { marketConfigured, resolveMarketOnchain, closeMarketOnchain, cancelMarketOnchain, predictionMarketContractId } from "@/lib/stellar";
 import { rateLimit } from "@/lib/ratelimit";
 import { clientIp } from "@/lib/ip";
 
@@ -31,12 +31,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const onchain = marketConfigured() && market.chainMarketId != null;
   const cid = market.chainMarketId as number;
+  const contractId = onchain ? predictionMarketContractId(market.createTxHash) : undefined;
 
   if (action === "close") {
     if (market.status !== "open") return NextResponse.json({ error: "not_open" }, { status: 409 });
     let resolveTxHash: string | undefined;
     if (onchain) {
-      try { resolveTxHash = (await closeMarketOnchain({ marketId: cid })).txHash; }
+      try { resolveTxHash = (await closeMarketOnchain({ contractId, marketId: cid })).txHash; }
       catch (e) { console.error("[markets/resolve] close on-chain failed:", e); return NextResponse.json({ error: "onchain_failed" }, { status: 502 }); }
     }
     const m = await db.predictionMarket.update({ where: { id }, data: { status: "closed", resolveTxHash } });
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     let resolveTxHash: string | undefined;
     if (onchain) {
-      try { resolveTxHash = (await cancelMarketOnchain({ marketId: cid })).txHash; }
+      try { resolveTxHash = (await cancelMarketOnchain({ contractId, marketId: cid })).txHash; }
       catch (e) {
         console.error("[markets/resolve] cancel on-chain failed:", e);
         await db.predictionMarket.updateMany({ where: { id, status: "cancelling" }, data: { status: market.status } }).catch(() => {});
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     let resolveTxHash: string | undefined;
     if (onchain) {
-      try { resolveTxHash = (await resolveMarketOnchain({ marketId: cid, winningOption })).txHash; }
+      try { resolveTxHash = (await resolveMarketOnchain({ contractId, marketId: cid, winningOption })).txHash; }
       catch (e) { console.error("[markets/resolve] resolve on-chain failed:", e); return NextResponse.json({ error: "onchain_failed" }, { status: 502 }); }
     }
 

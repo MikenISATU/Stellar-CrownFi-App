@@ -3,7 +3,15 @@ import { db } from "@/lib/db";
 import { readFanSession } from "@/lib/fanAuth";
 import { readAdminSession } from "@/lib/adminAuth";
 import { computeMarketView, parseMarketInput } from "@/lib/markets";
-import { cancelMarketOnchain, createMarketOnchain, marketConfigured } from "@/lib/stellar";
+import {
+  cancelMarketOnchain,
+  createMarketOnchain,
+  encodePredictionMarketCreateRef,
+  forceRefundMarketOnchain,
+  marketConfigured,
+  predictionMarketContractId,
+  supportsAdminForceRefund,
+} from "@/lib/stellar";
 import { rateLimit } from "@/lib/ratelimit";
 import { clientIp } from "@/lib/ip";
 
@@ -85,7 +93,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   let cancelTxHash: string | null = null;
   try {
     if (onchain) {
-      cancelTxHash = (await cancelMarketOnchain({ marketId: market.chainMarketId! })).txHash;
+      cancelTxHash = (await cancelMarketOnchain({ contractId: predictionMarketContractId(market.createTxHash), marketId: market.chainMarketId! })).txHash;
       // Persist the irreversible chain state before attempting the replacement.
       await db.predictionMarket.update({ where: { id }, data: { status: "cancelled", resolveTxHash: cancelTxHash } });
 
@@ -113,7 +121,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
           bannerUrl: input.bannerUrl,
           status: "open",
           chainMarketId: replacement.marketId,
-          createTxHash: replacement.txHash,
+          createTxHash: encodePredictionMarketCreateRef(replacement.contractId, replacement.txHash),
           resolveTxHash: null,
         },
       });
@@ -145,8 +153,10 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   }
 }
 
-// DELETE — the creator (or an admin) can permanently remove an empty market. Soroban
-// records are immutable, so an open on-chain market is cancelled before its DB row is removed.
+// DELETE — creators can remove empty markets. Admins may add ?force=1: a V2 market is
+// cancelled and every escrowed stake is sent directly back to its original wallet before
+// deletion. Legacy markets remain cancelled/visible until users claim, because their
+// deployed contract correctly requires the user's own signature for each refund.
 export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const admin = readAdminSession(req);
   const fan = readFanSession(req);
@@ -155,28 +165,44 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
   if (!limiter.ok) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
 
   const { id } = await ctx.params;
+  const force = Boolean(admin && req.nextUrl.searchParams.get("force") === "1");
   try {
     const market = await db.predictionMarket.findUnique({
       where: { id },
-      include: { _count: { select: { predictions: true } } },
+      include: { predictions: { select: { fanId: true, status: true } } },
     });
     if (!market) return NextResponse.json({ error: "not_found" }, { status: 404 });
     if (!admin && market.creatorFanId !== fan?.fanId) return NextResponse.json({ error: "not_market_creator" }, { status: 403 });
-    if (market._count.predictions > 0) {
+    if (["deleting", "cancelling"].includes(market.status)) {
+      return NextResponse.json({ error: "market_changed" }, { status: 409 });
+    }
+    if (market.predictions.length > 0 && !force) {
       return NextResponse.json({ error: "market_has_positions_use_cancel" }, { status: 409 });
+    }
+
+    if (force && market.status === "resolved") {
+      const payoutsPending = market.predictions.filter((prediction) => prediction.status === "won").length;
+      if (payoutsPending > 0) {
+        return NextResponse.json({ error: "market_payouts_pending", payoutsPending }, { status: 409 });
+      }
+      await db.predictionMarket.delete({ where: { id } });
+      return NextResponse.json({ ok: true, deleted: true, resolved: true });
     }
 
     const previousStatus = market.status;
     const locked = await db.predictionMarket.updateMany({
-      where: { id, status: previousStatus, predictions: { none: {} } },
+      where: { id, status: previousStatus },
       data: { status: "deleting" },
     });
-    if (locked.count !== 1) return NextResponse.json({ error: "market_has_positions_use_cancel" }, { status: 409 });
+    if (locked.count !== 1) return NextResponse.json({ error: "market_changed" }, { status: 409 });
 
     let cancelTxHash: string | undefined;
-    if (previousStatus === "open" && marketConfigured() && market.chainMarketId != null) {
+    let autoRefunded = 0;
+    const onchain = marketConfigured() && market.chainMarketId != null;
+    const contractId = onchain ? predictionMarketContractId(market.createTxHash) : undefined;
+    if (["open", "closed"].includes(previousStatus) && onchain) {
       try {
-        cancelTxHash = (await cancelMarketOnchain({ marketId: market.chainMarketId })).txHash;
+        cancelTxHash = (await cancelMarketOnchain({ contractId, marketId: market.chainMarketId! })).txHash;
       } catch (error) {
         console.error("[markets/delete] cancel on-chain failed:", error);
         await db.predictionMarket.updateMany({ where: { id, status: "deleting" }, data: { status: previousStatus } }).catch(() => {});
@@ -184,22 +210,66 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
       }
     }
 
-    // The relation filter closes the race between the initial count and deletion.
-    const removed = await db.predictionMarket.deleteMany({
-      where: { id, predictions: { none: {} } },
-    });
-    if (removed.count !== 1) {
-      await db.predictionMarket.updateMany({
-        where: { id, status: "deleting" },
-        data: { status: cancelTxHash ? "cancelled" : previousStatus, resolveTxHash: cancelTxHash },
-      }).catch(() => {});
-      return NextResponse.json(
-        { error: cancelTxHash ? "market_cancelled_has_positions" : "market_has_positions", cancelTxHash },
-        { status: 409 },
-      );
+    const unrefundedPredictions = market.predictions.filter((prediction) => prediction.status !== "claimed");
+    if (unrefundedPredictions.length > 0) {
+      // Off-chain demo positions contain no escrow: mark them refunded before deletion.
+      if (!onchain) {
+        await db.prediction.updateMany({ where: { marketId: id }, data: { status: "claimed" } });
+      } else if (!supportsAdminForceRefund(market.createTxHash)) {
+        // Never pretend a v1 user-authorized refund happened. Keep the market available so
+        // participants can sign the existing Claim full refund flow.
+        await db.$transaction([
+          db.predictionMarket.update({ where: { id }, data: { status: "cancelled", resolveTxHash: cancelTxHash } }),
+          db.prediction.updateMany({ where: { marketId: id, status: { not: "claimed" } }, data: { status: "lost" } }),
+        ]);
+        const pendingRefunds = new Set(unrefundedPredictions.map((prediction) => prediction.fanId)).size;
+        return NextResponse.json({
+          error: "legacy_market_refunds_require_claim",
+          cancelled: true,
+          deleted: false,
+          pendingRefunds,
+          cancelTxHash,
+        }, { status: 409 });
+      } else {
+        const fanIds = [...new Set(unrefundedPredictions.map((prediction) => prediction.fanId))];
+        autoRefunded = fanIds.length;
+        const owners = await db.fan.findMany({
+          where: { id: { in: fanIds } },
+          select: { id: true, walletAddress: true },
+        });
+        const ownerById = new Map(owners.map((owner) => [owner.id, owner.walletAddress]));
+        const failures: string[] = [];
+
+        for (const fanId of fanIds) {
+          const walletAddress = ownerById.get(fanId);
+          if (!walletAddress) {
+            failures.push(fanId);
+            continue;
+          }
+          try {
+            const refund = await forceRefundMarketOnchain({ contractId: contractId!, fanAddress: walletAddress, marketId: market.chainMarketId! });
+            await db.prediction.updateMany({
+              where: { marketId: id, fanId, status: { not: "claimed" } },
+              data: { status: "claimed", claimTxHash: refund.txHash },
+            });
+          } catch (error) {
+            console.error(`[markets/force-delete] refund failed for fan ${fanId}:`, error);
+            failures.push(fanId);
+          }
+        }
+
+        if (failures.length > 0) {
+          await db.$transaction([
+            db.predictionMarket.update({ where: { id }, data: { status: "cancelled", resolveTxHash: cancelTxHash } }),
+            db.prediction.updateMany({ where: { marketId: id, fanId: { in: failures }, status: { not: "claimed" } }, data: { status: "lost" } }),
+          ]);
+          return NextResponse.json({ error: "force_refund_incomplete", cancelled: true, refunded: fanIds.length - failures.length, pendingRefunds: failures.length }, { status: 502 });
+        }
+      }
     }
 
-    return NextResponse.json({ ok: true, cancelTxHash });
+    await db.predictionMarket.delete({ where: { id } });
+    return NextResponse.json({ ok: true, deleted: true, autoRefunded, cancelTxHash });
   } catch (error) {
     console.error("[markets/delete] failed:", error);
     return NextResponse.json({ error: "market_delete_failed" }, { status: 500 });

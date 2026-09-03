@@ -15,6 +15,7 @@ share of the whole pool (minus an optional platform fee). Self-contained on `sor
   has zero stake (funds would lock → cancel instead)
 - `claim(from, market_id)` → `stake × total_pool ÷ winning_pool − fee` (double-claim guarded)
 - `cancel_market` + `refund(from, market_id)` — full refunds for voided markets
+- `force_refund(user, market_id)` — admin-triggered refund after cancellation; escrow goes only to the original staker
 - admin: `pause` / `unpause` / `set_fee` / `transfer_admin`
 - views: `market`, `pool_of`, `position_of`, `has_claimed`, `market_count`, `paused`, `admin`
 

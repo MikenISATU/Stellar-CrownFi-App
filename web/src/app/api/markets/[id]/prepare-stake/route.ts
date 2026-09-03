@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireFan } from "@/lib/fanAuth";
 import { parseOptions } from "@/lib/markets";
-import { marketConfigured, buildStakeTx } from "@/lib/stellar";
+import { marketConfigured, buildStakeTx, predictionMarketContractId } from "@/lib/stellar";
 import { createTxIntent } from "@/lib/txIntents";
 import { rateLimit } from "@/lib/ratelimit";
 import { clientIp } from "@/lib/ip";
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (!marketConfigured() || market.chainMarketId == null) return NextResponse.json({ mock: true });
 
   try {
-    const { xdr, txHash } = await buildStakeTx({ fanAddress: auth.address, marketId: market.chainMarketId, option, amountUsdc: amount });
+    const { xdr, txHash } = await buildStakeTx({ contractId: predictionMarketContractId(market.createTxHash), fanAddress: auth.address, marketId: market.chainMarketId, option, amountUsdc: amount });
     const intent = createTxIntent({ kind: "market-stake", fanId: auth.fanId, marketId: id, option, amountUsdc: amount, expectedSource: auth.address, txHash });
     return NextResponse.json({ xdr, intentId: intent.id });
   } catch (e: any) {

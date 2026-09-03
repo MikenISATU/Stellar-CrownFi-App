@@ -291,25 +291,37 @@ impl PredictionMarket {
     /// Refund all of `from`'s stakes on a CANCELLED market.
     pub fn refund(e: Env, from: Address, market_id: u32) -> i128 {
         from.require_auth();
+        Self::refund_to(e, from, market_id)
+    }
+
+    /// Admin-assisted refund for a force-deleted market. The admin can trigger this only
+    /// after cancellation, and funds always go directly back to the original staker.
+    /// The admin cannot choose another recipient or withdraw the escrow to itself.
+    pub fn force_refund(e: Env, user: Address, market_id: u32) -> i128 {
+        require_admin(&e);
+        Self::refund_to(e, user, market_id)
+    }
+
+    fn refund_to(e: Env, user: Address, market_id: u32) -> i128 {
         let m = get_market(&e, market_id);
         if m.status != CANCELLED {
             panic_with_error!(&e, Error::NotCancelled);
         }
-        if e.storage().persistent().get::<_, bool>(&DataKey::Claimed(market_id, from.clone())).unwrap_or(false) {
+        if e.storage().persistent().get::<_, bool>(&DataKey::Claimed(market_id, user.clone())).unwrap_or(false) {
             panic_with_error!(&e, Error::AlreadyClaimed);
         }
         let mut total: i128 = 0;
         for opt in 0..m.num_options {
-            let pos: i128 = e.storage().persistent().get(&DataKey::Position(market_id, from.clone(), opt)).unwrap_or(0);
+            let pos: i128 = e.storage().persistent().get(&DataKey::Position(market_id, user.clone(), opt)).unwrap_or(0);
             total += pos;
         }
         if total <= 0 {
             panic_with_error!(&e, Error::NothingToClaim);
         }
-        e.storage().persistent().set(&DataKey::Claimed(market_id, from.clone()), &true);
-        token_client(&e).transfer(&e.current_contract_address(), &from, &total);
+        e.storage().persistent().set(&DataKey::Claimed(market_id, user.clone()), &true);
+        token_client(&e).transfer(&e.current_contract_address(), &user, &total);
         bump(&e);
-        e.events().publish((symbol_short!("refund"), market_id, from), total);
+        e.events().publish((symbol_short!("refund"), market_id, user), total);
         total
     }
 

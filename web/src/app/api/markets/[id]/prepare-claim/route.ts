@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireFan } from "@/lib/fanAuth";
-import { marketConfigured, buildClaimTx, buildMarketRefundTx } from "@/lib/stellar";
+import { marketConfigured, buildClaimTx, buildMarketRefundTx, predictionMarketContractId } from "@/lib/stellar";
 import { createTxIntent } from "@/lib/txIntents";
 
 // STEP 1 of a payout: build the unsigned claim() tx for a winner to sign in Freighter.
@@ -24,9 +24,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (!eligible) return NextResponse.json({ error: refundable ? "nothing_to_refund" : "nothing_to_claim" }, { status: 409 });
 
   try {
+    const contractId = predictionMarketContractId(market.createTxHash);
     const { xdr, txHash } = refundable
-      ? await buildMarketRefundTx({ fanAddress: auth.address, marketId: market.chainMarketId })
-      : await buildClaimTx({ fanAddress: auth.address, marketId: market.chainMarketId });
+      ? await buildMarketRefundTx({ contractId, fanAddress: auth.address, marketId: market.chainMarketId })
+      : await buildClaimTx({ contractId, fanAddress: auth.address, marketId: market.chainMarketId });
     const intent = createTxIntent({ kind: "market-claim", fanId: auth.fanId, marketId: id, expectedSource: auth.address, txHash });
     return NextResponse.json({ xdr, intentId: intent.id, mode: refundable ? "refund" : "claim" });
   } catch (e: any) {

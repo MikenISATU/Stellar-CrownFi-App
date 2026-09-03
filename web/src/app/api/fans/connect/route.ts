@@ -3,9 +3,20 @@ import { db } from "@/lib/db";
 import { isLikelyStellarAddress } from "@/lib/adminAuth";
 import { verifyFanSignature, createFanSession, setFanCookie } from "@/lib/fanAuth";
 import { clientIpHash } from "@/lib/ip";
+import { ensureFundedOnTestnet } from "@/lib/privyServer";
+import { mintTestUsdc } from "@/lib/stellar";
 
 // Anti-abuse: max NEW accounts per network (IP). Returning wallets are never capped.
-const MAX_ACCOUNTS_PER_IP = Number(process.env.MAX_ACCOUNTS_PER_IP ?? "2");
+// Shared event/office Wi-Fi is normal for CrownFi. Keep a high anti-bot ceiling instead
+// of blocking the third legitimate attendee behind the same public IP.
+const MAX_ACCOUNTS_PER_IP = Math.max(20, Number(process.env.MAX_ACCOUNTS_PER_IP ?? "20") || 20);
+const IS_TESTNET = !["public", "mainnet"].includes((process.env.STELLAR_NETWORK ?? "testnet").toLowerCase());
+
+async function fundNewTestnetWallet(walletAddress: string) {
+  if (!IS_TESTNET) return;
+  await ensureFundedOnTestnet(walletAddress);
+  await mintTestUsdc({ toAddress: walletAddress, amountUsdc: 50 });
+}
 
 // Step 2 of wallet sign-in: verify the Freighter signature proves control of the
 // address, then issue an httpOnly session cookie. fanId is never trusted from the
@@ -50,6 +61,12 @@ export async function POST(req: NextRequest) {
     const fan = await db.fan.create({
       data: { handle: `fan_${walletAddress.slice(-6)}`, walletAddress, registrationIpHash: ipHash, authProvider: "freighter" },
     });
+    // Give a brand-new testnet user enough demo balance to make their first
+    // prediction. Funding is best-effort so a temporary faucet outage cannot
+    // lock the user out of their account; the in-app faucet remains available.
+    await fundNewTestnetWallet(walletAddress).catch((e) =>
+      console.warn("[api/fans/connect] starter funding skipped:", e?.message ?? e)
+    );
     const res = NextResponse.json(fan);
     setFanCookie(res, createFanSession(fan.id, walletAddress));
     return res;

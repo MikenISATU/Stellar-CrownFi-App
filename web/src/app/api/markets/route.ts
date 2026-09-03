@@ -5,7 +5,7 @@ import { readFanSession } from "@/lib/fanAuth";
 import { computeMarketView, parseMarketInput } from "@/lib/markets";
 import { rateLimit } from "@/lib/ratelimit";
 import { clientIp } from "@/lib/ip";
-import { marketConfigured, createMarketOnchain } from "@/lib/stellar";
+import { marketConfigured, createMarketOnchain, encodePredictionMarketCreateRef } from "@/lib/stellar";
 
 // Community markets per user (open at once). Admins are unlimited.
 const MAX_USER_MARKETS = Number(process.env.MAX_USER_MARKETS ?? "3");
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     // the DB row so we never show a market that can't accept real stakes.
     if (marketConfigured()) {
       try {
-        const { marketId, txHash } = await createMarketOnchain({
+        const { marketId, txHash, contractId } = await createMarketOnchain({
           question,
           category,
           numOptions: options.length,
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
         });
         market = await db.predictionMarket.update({
           where: { id: market.id },
-          data: { chainMarketId: marketId, createTxHash: txHash },
+          data: { chainMarketId: marketId, createTxHash: encodePredictionMarketCreateRef(contractId, txHash) },
         });
       } catch (e) {
         console.error("[api/markets] on-chain create failed:", e);
