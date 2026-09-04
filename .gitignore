@@ -11,6 +11,7 @@ target
 prisma/migrations/dev.db*
 
 # local AI/editor/build artifacts
-.claude/settings.local.json
+.claude/
+.vercel/
 web/tsconfig.tsbuildinfo
 .env.vercel

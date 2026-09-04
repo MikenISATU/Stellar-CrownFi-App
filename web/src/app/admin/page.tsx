@@ -11,6 +11,7 @@ import { STATUS_LABEL, STATUS_CHIP } from "@/lib/pageant";
 import { messageFor } from "@/lib/messages";
 import { BannerUpload } from "@/components/BannerUpload";
 import { MarketCloseField } from "@/components/MarketCloseField";
+import { MarketOutcomesField } from "@/components/MarketOutcomesField";
 import { PAGEANT_SEGMENTS, MARKET_CATEGORIES, CATEGORY_LABEL } from "@/lib/segments";
 
 type Tab = "overview" | "rounds" | "contestants" | "requests" | "pageants" | "payments" | "markets";
@@ -761,10 +762,6 @@ function Markets({ markets, onCreate, onResolve, onDelete }: any) {
   const default3d = () => new Date(Date.now() + 72 * 3_600_000).toISOString();
   const [f, setF] = useState<{ question: string; category: string; options: string[]; optionFlags: string[]; closeTime: string; bannerUrl: string }>({ question: "", category: MARKET_CATEGORIES[0].key, options: ["", ""], optionFlags: ["", ""], closeTime: default3d(), bannerUrl: "" });
   const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
-  const setOption = (i: number, v: string) => setF((p) => ({ ...p, options: p.options.map((o, idx) => (idx === i ? v : o)) }));
-  const setOptionFlag = (i: number, v: string) => setF((p) => ({ ...p, optionFlags: p.optionFlags.map((code, idx) => (idx === i ? v.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2) : code)) }));
-  const addOption = () => setF((p) => (p.options.length < 32 ? { ...p, options: [...p.options, ""], optionFlags: [...p.optionFlags, ""] } : p));
-  const removeOption = (i: number) => setF((p) => ({ ...p, options: p.options.filter((_, idx) => idx !== i), optionFlags: p.optionFlags.filter((_, idx) => idx !== i) }));
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -793,23 +790,11 @@ function Markets({ markets, onCreate, onResolve, onDelete }: any) {
       <div className="glass grid gap-3 p-4">
         <input className="field" placeholder="Prediction question (e.g. Who wins the Q&A round?)" value={f.question} onChange={set("question")} />
         <select className="field" value={f.category} onChange={set("category")}>{MARKET_CATEGORIES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select>
-        <div className="space-y-2">
-          <div className="text-xs font-semibold text-[#5f6172]">Outcomes <span className="font-normal text-[#9a968b]">· optional ISO country flag</span></div>
-          {f.options.map((opt, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <span className="w-5 shrink-0 text-right text-xs tabular-nums text-[#9a968b]">{i + 1}</span>
-              <input className="field" placeholder={`Outcome ${i + 1}`} value={opt} onChange={(e) => setOption(i, e.target.value)} />
-              <label className="relative flex w-[4.75rem] shrink-0 items-center">
-                <span className="pointer-events-none absolute left-2.5 z-10 flex h-4 w-6 items-center justify-center"><Flag sash={f.optionFlags[i]} className="!h-4 !w-6" /></span>
-                <input className="field !pl-10 !pr-2 uppercase" aria-label={`Country code for outcome ${i + 1}`} title="Optional ISO country code, such as PH" maxLength={2} placeholder="Flag" value={f.optionFlags[i]} onChange={(e) => setOptionFlag(i, e.target.value)} />
-              </label>
-              {f.options.length > 2 && (
-                <button type="button" onClick={() => removeOption(i)} aria-label={`Remove outcome ${i + 1}`} className="shrink-0 rounded-lg border border-[#e7e2d3] p-2 text-[#9a968b] transition hover:border-[#e7d0d0] hover:text-[#9f1239]"><Icons.X size={14} strokeWidth={2} /></button>
-              )}
-            </div>
-          ))}
-          {f.options.length < 32 && <button type="button" onClick={addOption} className="text-sm font-semibold text-[#a97f16] hover:underline">+ Add outcome</button>}
-        </div>
+        <MarketOutcomesField
+          options={f.options}
+          optionFlags={f.optionFlags}
+          onChange={(options, optionFlags) => setF((prev) => ({ ...prev, options, optionFlags }))}
+        />
         <MarketCloseField value={f.closeTime} onChange={(iso) => setF((prev) => ({ ...prev, closeTime: iso }))} />
         <BannerUpload value={f.bannerUrl} onUploaded={(url) => setF({ ...f, bannerUrl: url })} />
         <div className="flex flex-wrap items-center gap-3">

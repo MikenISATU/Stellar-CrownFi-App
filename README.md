@@ -6,11 +6,13 @@ CrownFi is a hackathon/testnet MVP for pageant voting, ticketing, fan rewards, c
 
 Official testnet deployment: [stellar-crown-fi-ap-jr77.vercel.app](https://stellar-crown-fi-ap-jr77.vercel.app/). CrownFi never asks for a recovery phrase, seed phrase, or private key. Review the public [security policy](SECURITY.md), the deployed [wallet-safety page](https://stellar-crown-fi-ap-jr77.vercel.app/security), and the [false-positive remediation record](docs/security/phishing-false-positive-remediation.md) before connecting a wallet.
 
+Public source repository: [github.com/MikenISATU/Stellar-CrownFi-App](https://github.com/MikenISATU/Stellar-CrownFi-App)
+
 ## What's new in the finale build (merged to `main`)
 
 Beyond the mainline voting/ticketing/collectibles, this build adds:
 
-- **Prediction markets** — Polymarket-style pooled markets on pageant outcomes (or any topic via a "General" category). Any connected user *or* admin can create a market with per-outcome inputs; fans stake USDC, **cancel positions** before close, and **claim** a pro-rata share of the pool. A **2% fee on winnings only** goes to a treasury. Includes a live **odds-over-time chart** and a **tabular outcomes** view (Chance / Pool / To-win).
+- **Prediction markets** — Polymarket-style pooled markets on pageant outcomes (or any topic via the "Other" category). Any connected user *or* admin can create unlimited markets with manual outcomes or a TXT/CSV list of up to 256 choices; fans stake USDC, **cancel positions** before close, and **claim** a pro-rata share of the pool. A **2% fee on winnings only** goes to a treasury. Includes a live **odds-over-time chart** and a **tabular outcomes** view (Chance / Pool / To-win).
 - **Reusable pageant NFT contract (`pageant-nft`)** — one instance per pageant, **per-candidate IPFS metadata** (Pinata), effectively unlimited supply, **one mint per wallet**, and **admin-signed minting** so buyers sign only the payment. In-app **NFT gallery** on `/me` (token id + art + explorer link).
 - **Per-category voting & leaderboards** — each pageant stage (Top 20 Swimsuit, Top 10 Long Gown, Top 5 Q&A, Overall Winner) is its **own round with its own tally** and per-category candidate photos (`web/public/candidates/<stage>/`). The leaderboard has **Swimsuit / Long Gown / Overall** boards; closed rounds use the anchored tally. The Vote tab shows the wallet's **existing vote** as locked-in.
 - **Organizer submissions** — organizers register a pageant, add candidates with photos, and link a **Google Drive folder** of required files (permits, roster, hi-res photos); admins preview everything in the review modal.
@@ -31,11 +33,14 @@ The current and legacy Soroban contracts are deployed on Stellar testnet:
 | Test USDC | Mintable demo token everything settles in (faucet source) | `CAE2GXXU4BPLRX5DHLFJKUR7AP5ETPIERGTFNCY7PEFCEL5H3G3RG6LW` |
 | Pageant NFT | Finale-build candidate NFTs: per-candidate IPFS metadata, one mint per wallet, admin-signed mint | `CCONZKTIQHR5UE4AKROICICZ2JSWDAXYBNYDCKDIMRFSIK37PND5PMQW` |
 | Prediction market V1 — legacy | Original pooled markets. Kept only for existing positions and participant-signed refunds | `CDF3R2LUIZJUXCFUBXP62F25M2BYUJT6OT3QYR46MWWBUFEXEAY25POO` |
-| Prediction market V2 — current | New pooled markets plus safe admin-assisted refunds to each original staker during force deletion | `CATV2RPFRMSVMBEJSXQ4SREUOHZ45WJ2F657IQMVYH3CFKB5XZPBVVX7` |
+| Prediction market V2 — legacy | Refund-capable pooled markets retained for existing positions; supports up to 32 outcomes | `CATV2RPFRMSVMBEJSXQ4SREUOHZ45WJ2F657IQMVYH3CFKB5XZPBVVX7` |
+| Prediction market V2.1 — current | Safe admin-assisted refunds plus bounded-cost refunds and up to 256 outcomes; new markets use this contract | `CDOSOKE2MMFRZ6WR4DKASL3YQ56ALOE6S36BPVBVVOYYYIH2CHVBRBGE` |
 
 The prediction **treasury** (fee recipient) is a regular wallet, not a contract: `GC3PXGAWQWHHV6M6AKR3LSZZ7RNYZXASGNJM7BSU3EMWI5KG2R5QSIY3`.
 
 Runbooks: [`contracts/DeploySC.md`](contracts/DeploySC.md) (deploy/init), [`docs/setup/deploy-nft-5-contestants.md`](docs/setup/deploy-nft-5-contestants.md) (Pinata + NFT), and the GCash steps in the PR description.
+
+Deployment proof: [current prediction contract on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CDOSOKE2MMFRZ6WR4DKASL3YQ56ALOE6S36BPVBVVOYYYIH2CHVBRBGE), [150-outcome verification transaction](https://stellar.expert/explorer/testnet/tx/af84ff127d74ac175f8c5ac0d1fdcb084eae25e518101d4a0a0db655b4624d0f), and its immediate [test-market cancellation](https://stellar.expert/explorer/testnet/tx/0bf67a98f685ce1c942d633f42f83e16908a69fb57027a4f6979d6e5751c7bac).
 
 ## Mainline architecture
 

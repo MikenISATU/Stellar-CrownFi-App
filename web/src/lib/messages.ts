@@ -64,8 +64,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   out_of_stock: "That reward is sold out.",
 
   // ── Prediction markets ──
-  market_limit_reached: "You’ve reached your limit of open community markets. Close or resolve one before creating another.",
-  invalid_options: "Add at least two options (comma-separated) for people to predict on.",
+  invalid_options: "Add between 2 and 256 distinct outcomes for people to predict on.",
   duplicate_options: "Each outcome must have a different name.",
   invalid_close_time: "Choose a closing date and time in the future.",
   market_closed: "This market is closed — predictions are no longer accepted.",

@@ -304,7 +304,7 @@ export async function buildAnchorTx(params: {
 // the unsigned tx here (buyer is the source, so their signature authorizes the transfer)
 // and submit it via submitSignedXdr() after signing.
 
-const PREDICTION_V2_TESTNET_ID = "CATV2RPFRMSVMBEJSXQ4SREUOHZ45WJ2F657IQMVYH3CFKB5XZPBVVX7";
+const PREDICTION_V2_TESTNET_ID = "CDOSOKE2MMFRZ6WR4DKASL3YQ56ALOE6S36BPVBVVOYYYIH2CHVBRBGE";
 const MARKET_REF_PREFIX = "pm2:";
 
 function activePredictionContractId(): string {

@@ -7,9 +7,6 @@ import { rateLimit } from "@/lib/ratelimit";
 import { clientIp } from "@/lib/ip";
 import { marketConfigured, createMarketOnchain, encodePredictionMarketCreateRef } from "@/lib/stellar";
 
-// Community markets per user (open at once). Admins are unlimited.
-const MAX_USER_MARKETS = Number(process.env.MAX_USER_MARKETS ?? "3");
-
 // GET — public list of markets (filters: ?category= ?status= ?pageantId= ?q=).
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
@@ -39,7 +36,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST — create a market. Admin → official (unlimited). Signed-in fan → community (limited).
+// POST — create a market. Admin → official. Signed-in fans may create unlimited community markets.
 export async function POST(req: NextRequest) {
   const admin = readAdminSession(req);
   const fan = admin ? null : readFanSession(req);
@@ -56,12 +53,6 @@ export async function POST(req: NextRequest) {
   const { question, category, options, optionFlags, closeTime, pageantId, bannerUrl } = parsed.value;
 
   try {
-    // Per-user cap on open community markets.
-    if (fan) {
-      const open = await db.predictionMarket.count({ where: { creatorFanId: fan.fanId, status: "open" } });
-      if (open >= MAX_USER_MARKETS) return NextResponse.json({ error: "market_limit_reached" }, { status: 429 });
-    }
-
     let market = await db.predictionMarket.create({
       data: {
         question,

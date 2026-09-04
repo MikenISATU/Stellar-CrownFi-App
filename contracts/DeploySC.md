@@ -142,7 +142,7 @@ Handles funds (USDC escrow) — **external security review required before mainn
 
 ```bash
 cd contracts
-cargo test -p prediction-market            # 6 tests: payout math, fee, close, cancel/refund, pause
+cargo test -p prediction-market            # 10 tests, including 150-option creation/refund
 stellar contract build                     # → target/wasm32v1-none/release/prediction_market.wasm
 
 stellar contract deploy \
@@ -165,6 +165,7 @@ stellar contract invoke --id C... --source alice --network testnet -- \
   resolve_market --market_id 1 --winning_option 2
 ```
 
-Keep `PREDICTION_MARKET_CONTRACT_ID` for legacy markets and store the refund-capable
-contract as `PREDICTION_MARKET_CONTRACT_ID_V2`. New market rows encode the contract id
-with their creation transaction, so v1 positions continue using v1 while new markets use v2.
+`num_options` accepts 2–256 outcomes. Keep `PREDICTION_MARKET_CONTRACT_ID` for V1 markets and
+store the current refund-capable contract as `PREDICTION_MARKET_CONTRACT_ID_V2`. New market rows
+encode the exact contract id with their creation transaction, so older positions continue using
+the contract that originally escrowed them.

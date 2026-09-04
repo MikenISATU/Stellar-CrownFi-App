@@ -11,11 +11,13 @@ gold gradient if the file is missing).
 
 | Category (in the create form) | Filename to add here    |
 | ----------------------------- | ----------------------- |
-| Top 20 · Swimsuit             | `swimsuit.webp`         |
-| Top 10 · Long Gown            | `long_gown.webp`        |
-| Top 5 · Question & Answer     | `qa.webp`               |
+| Preliminary                   | `preliminary.webp`      |
+| National Costume Round        | `national_costume.webp` |
+| Swimsuit Round                | `swimsuit.webp`         |
+| Long Gown Round               | `long_gown.webp`        |
+| Question & Answer Round       | `qa.webp`               |
 | Overall Winner                | `overall.webp`          |
-| General / Other               | `general.webp`          |
+| Other                         | `other.webp`            |
 
 3. That's it — no code change needed. The banner shows up on the market cards, the detail page,
    and the homepage spotlight for every market in that category.

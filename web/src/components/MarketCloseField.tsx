@@ -11,20 +11,72 @@ const PRESETS: { label: string; hours: number }[] = [
   { label: "2 weeks", hours: 336 },
 ];
 
+const COMMON_TIMEZONES = [
+  "UTC",
+  "Asia/Manila",
+  "Asia/Singapore",
+  "Asia/Bangkok",
+  "Asia/Tokyo",
+  "Asia/Seoul",
+  "Asia/Kolkata",
+  "Asia/Dubai",
+  "Europe/London",
+  "Europe/Paris",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Sao_Paulo",
+  "Australia/Sydney",
+  "Pacific/Auckland",
+] as const;
+
 function isoFromHours(hours: number): string {
   return new Date(Date.now() + hours * 3_600_000).toISOString();
 }
 
-// Format an ISO string for a datetime-local input (local time, no seconds/zone).
-function toLocalInput(iso: string): string {
+function partsInZone(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value ?? 0);
+  return { year: value("year"), month: value("month"), day: value("day"), hour: value("hour"), minute: value("minute"), second: value("second") };
+}
+
+// Format an ISO instant as wall-clock time in the creator's selected zone.
+function toZonedInput(iso: string, timeZone: string): string {
   if (!iso) return "";
   const d = new Date(iso);
-  const off = d.getTimezoneOffset() * 60_000;
-  return new Date(d.getTime() - off).toISOString().slice(0, 16);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = partsInZone(d, timeZone);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${p.year}-${pad(p.month)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}`;
+}
+
+// Convert wall-clock time in an IANA timezone to the UTC instant stored by the API.
+function isoFromZonedInput(value: string, timeZone: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return "";
+  const desired = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]));
+  let guess = desired;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const actual = partsInZone(new Date(guess), timeZone);
+    const represented = Date.UTC(actual.year, actual.month - 1, actual.day, actual.hour, actual.minute, actual.second);
+    guess += desired - represented;
+  }
+  return new Date(guess).toISOString();
 }
 
 export function MarketCloseField({ value, onChange }: { value: string; onChange: (iso: string) => void }) {
   const [preset, setPreset] = useState<number | "custom">(72);
+  const [timeZone, setTimeZone] = useState<string>("Asia/Manila");
 
   function choose(hours: number) {
     setPreset(hours);
@@ -54,12 +106,23 @@ export function MarketCloseField({ value, onChange }: { value: string; onChange:
         </button>
       </div>
       {preset === "custom" && (
-        <input
-          className="field mt-2"
-          type="datetime-local"
-          value={toLocalInput(value)}
-          onChange={(e) => onChange(e.target.value ? new Date(e.target.value).toISOString() : "")}
-        />
+        <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_13rem]">
+          <label>
+            <span className="mb-1 block text-[11px] font-medium text-[#7a7768]">Date & time <span className="font-normal">(MM/DD/YYYY)</span></span>
+            <input
+              className="field"
+              type="datetime-local"
+              value={toZonedInput(value, timeZone)}
+              onChange={(event) => onChange(event.target.value ? isoFromZonedInput(event.target.value, timeZone) : "")}
+            />
+          </label>
+          <label>
+            <span className="mb-1 block text-[11px] font-medium text-[#7a7768]">Timezone</span>
+            <select className="field" value={timeZone} onChange={(event) => setTimeZone(event.target.value)}>
+              {COMMON_TIMEZONES.map((zone) => <option key={zone} value={zone}>{zone.replaceAll("_", " ")}</option>)}
+            </select>
+          </label>
+        </div>
       )}
     </div>
   );

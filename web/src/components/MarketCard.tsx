@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { CATEGORY_LABEL, categoryImage } from "@/lib/segments";
-import { Flag } from "@/components/Flag";
+import { OutcomeMarker } from "@/components/OutcomeMarker";
 
 export { CATEGORY_LABEL };
 
@@ -17,7 +17,7 @@ export function statusBadge(m: MarketView): { label: string; cls: string } {
   if (m.status === "resolved") return { label: "Resolved", cls: "bg-[#e1f5ee] text-[#0f6e56]" };
   if (m.status === "cancelled") return { label: "Cancelled", cls: "bg-[#fbe9ef] text-[#9f1239]" };
   if (m.live) return { label: "Live", cls: "bg-[#fdeaea] text-[#c0392b]" };
-  if (m.status === "open" && m.endsInMs <= 0) return { label: "Closing", cls: "bg-[#faf0d2] text-[#8a6d1f]" };
+  if (m.status === "closed" || (m.status === "open" && m.endsInMs <= 0)) return { label: "Previous", cls: "bg-[#faf0d2] text-[#8a6d1f]" };
   return { label: "Upcoming", cls: "bg-[#e6eefb] text-[#2c4a80]" };
 }
 
@@ -65,14 +65,14 @@ export function MarketCard({ m }: { m: MarketView }) {
 
         {resolvedWin ? (
           <div className="mt-3 flex flex-1 items-center gap-2 rounded-xl bg-[#f2fbf7] px-3 py-2.5 text-sm text-[#0f6e56]">
-            <span aria-hidden>🏆</span> <span className="flex min-w-0 items-center gap-1.5 truncate"><Flag sash={resolvedWin.flagCode} className="!h-3.5 !w-5" /><b className="truncate">{resolvedWin.label}</b> won</span>
+            <span aria-hidden>🏆</span> <span className="flex min-w-0 items-center gap-1.5 truncate"><OutcomeMarker label={resolvedWin.label} flagCode={resolvedWin.flagCode} className="!h-3.5 !w-5" /><b className="truncate">{resolvedWin.label}</b> won</span>
           </div>
         ) : (
           <div className="mt-3 flex-1 space-y-2">
             {top.map((o, i) => (
               <div key={o.index}>
                 <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="flex min-w-0 items-center gap-1.5 truncate text-[#5f6172]"><Flag sash={o.flagCode} className="!h-3 !w-[18px]" /><span className="truncate">{o.label}</span></span>
+                  <span className="flex min-w-0 items-center gap-1.5 truncate text-[#5f6172]"><OutcomeMarker label={o.label} flagCode={o.flagCode} className="!h-3 !w-[18px]" /><span className="truncate">{o.label}</span></span>
                   <span className={`shrink-0 font-semibold tabular-nums ${i === 0 ? "text-[#a97f16]" : "text-[#9a968b]"}`}>{o.percent}%</span>
                 </div>
                 <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[#efe9d8]">

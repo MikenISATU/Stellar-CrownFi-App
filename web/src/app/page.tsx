@@ -51,8 +51,8 @@ export default function Home() {
             Vote, reserve your seat, and collect your queen — all on Stellar.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Link href="/tickets" className="btn-gold !px-8 !py-3 text-base">Buy Tickets</Link>
             <Link href="/vote" className="btn-ghost !px-7 !py-3 text-base">Cast your vote</Link>
+            <Link href="/tickets" className="btn-gold !px-8 !py-3 text-base">Buy Tickets</Link>
           </div>
         </div>
       </section>

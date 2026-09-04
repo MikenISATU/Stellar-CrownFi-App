@@ -6,6 +6,7 @@
 // Keep this in sync with the contract's initialize(fee_bps=...).
 export const PLATFORM_FEE_BPS = Number(process.env.NEXT_PUBLIC_PLATFORM_FEE_BPS ?? "200"); // 2%
 export const PLATFORM_FEE_PCT = PLATFORM_FEE_BPS / 100; // for display, e.g. 2
+export const MAX_MARKET_OPTIONS = 256;
 
 export type MarketOptionView = { index: number; label: string; flagCode: string | null; pool: number; percent: number };
 export type MarketInput = {
@@ -86,7 +87,7 @@ export function parseMarketInput(body: any): { value: MarketInput } | { error: s
   const closeTime = body?.closeTime ? new Date(body.closeTime) : null;
 
   if (question.length < 3 || !category) return { error: "missing_fields" };
-  if (options.length < 2 || options.length > 32) return { error: "invalid_options" };
+  if (options.length < 2 || options.length > MAX_MARKET_OPTIONS) return { error: "invalid_options" };
   if (new Set(options.map((option) => option.toLocaleLowerCase())).size !== options.length) return { error: "duplicate_options" };
   if (!closeTime || Number.isNaN(closeTime.getTime()) || closeTime.getTime() <= Date.now()) return { error: "invalid_close_time" };
 

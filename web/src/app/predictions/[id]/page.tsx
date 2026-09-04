@@ -8,9 +8,11 @@ import { messageFor } from "@/lib/messages";
 import { estimateReward, PLATFORM_FEE_PCT } from "@/lib/markets";
 import { MarketView, CATEGORY_LABEL, statusBadge, timeLeft } from "@/components/MarketCard";
 import { OddsChart } from "@/components/OddsChart";
-import { Flag } from "@/components/Flag";
+import { OutcomeMarker } from "@/components/OutcomeMarker";
 import { GoogleMark } from "@/components/brandIcons";
 import { MarketForm } from "@/components/MarketForm";
+import { categoryImage } from "@/lib/segments";
+import { binaryOutcomeSymbol } from "@/lib/marketOptions";
 
 const PRIVY_ENABLED = Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID);
 
@@ -231,10 +233,16 @@ export default function MarketDetail() {
     <div className="space-y-6">
       <Link href="/predictions" className="text-sm text-[#7a7768] hover:text-[#23252f]">← All markets</Link>
 
+      <div className="relative h-40 overflow-hidden rounded-2xl bg-gradient-to-br from-[#eacb63] via-[#d4af37] to-[#8a6420] shadow-[0_18px_42px_-28px_rgba(86,58,9,0.7)] sm:h-56">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={m.bannerUrl ?? categoryImage(m.category)} alt={`Banner for ${m.question}`} className="absolute inset-0 h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-white/10" />
+      </div>
+
       {m.status === "resolved" && m.winningOption != null && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-[#f2fbf7] px-5 py-3 text-sm">
           <span className="text-lg" aria-hidden>🏆</span>
-          <span className="flex items-center gap-1.5 text-[#0f6e56]"><Flag sash={m.options[m.winningOption]?.flagCode} className="!h-4 !w-6" /><b>{m.options[m.winningOption]?.label}</b> won this segment.</span>
+          <span className="flex items-center gap-1.5 text-[#0f6e56]"><OutcomeMarker label={m.options[m.winningOption]?.label ?? ""} flagCode={m.options[m.winningOption]?.flagCode} className="!h-4 !w-6" /><b>{m.options[m.winningOption]?.label}</b> won this segment.</span>
           <span className="ml-auto rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">Result anchored on-chain</span>
         </div>
       )}
@@ -319,7 +327,7 @@ export default function MarketDetail() {
                     </span>
                   )}
                 </div>
-                <div className="mt-0.5 flex items-center gap-1.5 text-xs text-[#7a7768]"><Flag sash={leader?.flagCode} className="!h-3.5 !w-5" />{leader?.label ?? "—"} implied probability</div>
+                <div className="mt-0.5 flex items-center gap-1.5 text-xs text-[#7a7768]"><OutcomeMarker label={leader?.label ?? ""} flagCode={leader?.flagCode} className="!h-3.5 !w-5" />{leader?.label ?? "—"} implied probability</div>
               </div>
             </div>
             <div className="mt-4">
@@ -351,7 +359,7 @@ export default function MarketDetail() {
                     className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${pick === o.index ? "border-[#c9a227] bg-[#faf6ea]" : won ? "border-emerald-300 bg-emerald-50/50" : "border-[#eee6d3] bg-white"} ${canPredict ? "hover:border-[#c9a227]" : ""}`}>
                     <div className="min-w-0 flex-1">
                       <span className="flex items-center gap-1.5 truncate font-medium text-[#23252f]">
-                        <Flag sash={o.flagCode} className="!h-4 !w-6" />
+                        <OutcomeMarker label={o.label} flagCode={o.flagCode} className="!h-4 !w-6" />
                         <span className="truncate">{o.label}</span>
                         {won && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">🏆 Winner</span>}
                       </span>
@@ -441,7 +449,7 @@ export default function MarketDetail() {
                     onChange={(e) => { setPick(e.target.value === "" ? null : Number(e.target.value)); setStakeError(""); }}
                   >
                     <option value="">Select an outcome…</option>
-                    {m.options.map((o) => <option key={o.index} value={o.index}>{o.flagCode ? `${o.flagCode} · ` : ""}{o.label} · {o.percent}%</option>)}
+                    {m.options.map((o) => <option key={o.index} value={o.index}>{binaryOutcomeSymbol(o.label) === "yes" ? "✓ · " : binaryOutcomeSymbol(o.label) === "no" ? "✕ · " : o.flagCode ? `${o.flagCode} · ` : ""}{o.label} · {o.percent}%</option>)}
                   </select>
                 </label>
 
@@ -450,7 +458,7 @@ export default function MarketDetail() {
                   {m.options.map((o) => (
                     <button key={o.index} onClick={() => { setPick(o.index); setStakeError(""); }}
                       className={`flex min-h-[40px] items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${pick === o.index ? "border-[#a97f16]/50 bg-gradient-to-b from-[#e4c358] to-[#c39a2c] text-[#1a1f35]" : "border-[#e7e2d3] bg-white text-[#5f6172] hover:border-[#c9a227]"}`}>
-                      <Flag sash={o.flagCode} className="!h-3.5 !w-5" />{o.label} <span className="tabular-nums opacity-80">{o.percent}%</span>
+                      <OutcomeMarker label={o.label} flagCode={o.flagCode} className="!h-3.5 !w-5" />{o.label} <span className="tabular-nums opacity-80">{o.percent}%</span>
                     </button>
                   ))}
                 </div>

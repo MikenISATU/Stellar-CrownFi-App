@@ -28,6 +28,7 @@ const RESOLVED: u32 = 2;
 const CANCELLED: u32 = 3;
 
 const BPS_DENOM: i128 = 10_000;
+const MAX_OPTIONS: u32 = 256;
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -74,6 +75,7 @@ enum DataKey {
     Market(u32),
     Pool(u32, u32),            // (market, option) -> i128
     Position(u32, Address, u32), // (market, user, option) -> i128
+    PositionTotal(u32, Address), // aggregate stake keeps 100+ option refunds bounded
     Claimed(u32, Address),     // -> bool
 }
 
@@ -129,7 +131,7 @@ impl PredictionMarket {
     /// Create a market (admin only). Returns the market id.
     pub fn create_market(e: Env, question: String, category: String, num_options: u32, close_time: u64) -> u32 {
         require_admin(&e);
-        if num_options < 2 || num_options > 32 {
+        if num_options < 2 || num_options > MAX_OPTIONS {
             panic_with_error!(&e, Error::InvalidParams);
         }
         if close_time <= e.ledger().timestamp() {
@@ -168,6 +170,8 @@ impl PredictionMarket {
         e.storage().persistent().set(&DataKey::Pool(market_id, option), &(cur + amount));
         let pos: i128 = e.storage().persistent().get(&DataKey::Position(market_id, from.clone(), option)).unwrap_or(0);
         e.storage().persistent().set(&DataKey::Position(market_id, from.clone(), option), &(pos + amount));
+        let position_total: i128 = e.storage().persistent().get(&DataKey::PositionTotal(market_id, from.clone())).unwrap_or(0);
+        e.storage().persistent().set(&DataKey::PositionTotal(market_id, from.clone()), &(position_total + amount));
         m.total_pool += amount;
         e.storage().persistent().set(&DataKey::Market(market_id), &m);
         bump(&e);
@@ -197,6 +201,8 @@ impl PredictionMarket {
         let cur = pool(&e, market_id, option);
         e.storage().persistent().set(&DataKey::Pool(market_id, option), &(cur - pos));
         e.storage().persistent().set(&DataKey::Position(market_id, from.clone(), option), &0i128);
+        let position_total: i128 = e.storage().persistent().get(&DataKey::PositionTotal(market_id, from.clone())).unwrap_or(0);
+        e.storage().persistent().set(&DataKey::PositionTotal(market_id, from.clone()), &(position_total - pos));
         m.total_pool -= pos;
         e.storage().persistent().set(&DataKey::Market(market_id), &m);
         token_client(&e).transfer(&e.current_contract_address(), &from, &pos);
@@ -310,15 +316,12 @@ impl PredictionMarket {
         if e.storage().persistent().get::<_, bool>(&DataKey::Claimed(market_id, user.clone())).unwrap_or(false) {
             panic_with_error!(&e, Error::AlreadyClaimed);
         }
-        let mut total: i128 = 0;
-        for opt in 0..m.num_options {
-            let pos: i128 = e.storage().persistent().get(&DataKey::Position(market_id, user.clone(), opt)).unwrap_or(0);
-            total += pos;
-        }
+        let total: i128 = e.storage().persistent().get(&DataKey::PositionTotal(market_id, user.clone())).unwrap_or(0);
         if total <= 0 {
             panic_with_error!(&e, Error::NothingToClaim);
         }
         e.storage().persistent().set(&DataKey::Claimed(market_id, user.clone()), &true);
+        e.storage().persistent().set(&DataKey::PositionTotal(market_id, user.clone()), &0i128);
         token_client(&e).transfer(&e.current_contract_address(), &user, &total);
         bump(&e);
         e.events().publish((symbol_short!("refund"), market_id, user), total);

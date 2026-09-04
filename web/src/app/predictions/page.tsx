@@ -44,7 +44,7 @@ export default function PredictionsLanding() {
       if (cat !== "all" && m.category !== cat) return false;
       if (status === "live" && !m.live) return false;
       if (status === "upcoming" && !(m.status === "open" && !m.live)) return false;
-      if (status === "previous" && m.status !== "closed" && m.status !== "resolved") return false;
+      if (status === "previous" && !(m.status === "closed" || m.status === "resolved" || (m.status === "open" && !m.live))) return false;
       if (status === "cancelled" && m.status !== "cancelled") return false;
       if (status === "mine" && !m.isCreator) return false;
       if (q && !m.question.toLowerCase().includes(q.toLowerCase())) return false;
@@ -53,6 +53,8 @@ export default function PredictionsLanding() {
   }, [markets, cat, status, q]);
 
   const live = filtered.filter((m) => m.live).sort((a, b) => (b.official ? 1 : 0) - (a.official ? 1 : 0));
+  const defaultView = status === "all" && cat === "all" && !q;
+  const sectionMarkets = defaultView ? filtered.filter((m) => !m.live) : filtered;
 
   return (
     <div className="space-y-8">
@@ -142,7 +144,7 @@ export default function PredictionsLanding() {
       )}
 
       {/* Featured live */}
-      {markets !== null && status === "all" && cat === "all" && !q && live.length > 0 && (
+      {markets !== null && defaultView && live.length > 0 && (
         <section>
           <h2 className="mb-3 flex items-center gap-2 tracking-tight text-2xl font-semibold text-[#23252f]">
             <span className="relative flex h-2 w-2">
@@ -152,19 +154,19 @@ export default function PredictionsLanding() {
             Live now
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {live.slice(0, 3).map((m) => <MarketCard key={m.id} m={m} />)}
+            {live.map((m) => <MarketCard key={m.id} m={m} />)}
           </div>
         </section>
       )}
 
-      {/* All (filtered) */}
+      {/* Closed history by default; the selected subset when filters are active. */}
       {markets !== null && (
         <section>
-          {status === "all" && cat === "all" && !q && <h2 className="mb-3 tracking-tight text-2xl font-semibold text-[#23252f]">All markets</h2>}
-          {filtered.length === 0 ? (
+          {defaultView && <h2 className="mb-3 tracking-tight text-2xl font-semibold text-[#23252f]">Closed markets</h2>}
+          {sectionMarkets.length === 0 ? (
             <div className="glass p-10 text-center">
               <div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-full surface-soft text-[#a97f16]"><Icons.Search size={20} strokeWidth={1.75} /></div>
-              {q || cat !== "all" || status !== "all" ? (
+              {!defaultView ? (
                 <>
                   <div className="font-display text-xl text-[#23252f]">No markets match your filters</div>
                   <p className="mt-2 text-sm text-[#7a7768]">Try a different category or clear your search.</p>
@@ -172,14 +174,14 @@ export default function PredictionsLanding() {
                 </>
               ) : (
                 <>
-                  <div className="font-display text-xl text-[#23252f]">No markets yet</div>
-                  <p className="mt-2 text-sm text-[#7a7768]">Prediction markets open up as pageants go live — or open your own above.</p>
+                  <div className="font-display text-xl text-[#23252f]">No closed markets yet</div>
+                  <p className="mt-2 text-sm text-[#7a7768]">Completed and cancelled markets will appear here as an auditable history.</p>
                 </>
               )}
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((m) => <MarketCard key={m.id} m={m} />)}
+              {sectionMarkets.map((m) => <MarketCard key={m.id} m={m} />)}
             </div>
           )}
         </section>

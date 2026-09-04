@@ -1,0 +1,24 @@
+const COUNTRY_CODES = `AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CP CR CU CV CW CX CY CZ DE DG DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW`.split(" ");
+
+const displayNames = new Intl.DisplayNames(["en"], { type: "region" });
+
+export type CountryOption = { code: string; name: string };
+
+export const COUNTRY_OPTIONS: CountryOption[] = COUNTRY_CODES
+  .map((code) => ({ code, name: displayNames.of(code) ?? code }))
+  .sort((a, b) => a.name.localeCompare(b.name));
+
+const CODE_BY_NAME = new Map(COUNTRY_OPTIONS.map((country) => [country.name.toLocaleLowerCase(), country.code]));
+
+export function countryName(code?: string | null): string {
+  const normalized = String(code ?? "").trim().toUpperCase();
+  return COUNTRY_OPTIONS.find((country) => country.code === normalized)?.name ?? "";
+}
+
+export function countryCodeFor(value?: string | null): string {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) return "";
+  const upper = normalized.toUpperCase();
+  if (COUNTRY_CODES.includes(upper)) return upper;
+  return CODE_BY_NAME.get(normalized.toLocaleLowerCase()) ?? "";
+}

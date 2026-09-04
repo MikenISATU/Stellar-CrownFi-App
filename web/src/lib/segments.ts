@@ -9,11 +9,16 @@ export const PAGEANT_SEGMENTS = [
 
 export type SegmentKey = (typeof PAGEANT_SEGMENTS)[number]["key"];
 
-// Prediction-market categories = the pageant stages PLUS "General" for any other prediction.
-// (Voting stays limited to PAGEANT_SEGMENTS; markets are free-form.)
+// Prediction-market categories are deliberately separate from voting rounds: creators can
+// open a market for any stage, while voting remains limited to PAGEANT_SEGMENTS.
 export const MARKET_CATEGORIES = [
-  ...PAGEANT_SEGMENTS,
-  { key: "general", label: "General / Other", short: "General" },
+  { key: "preliminary", label: "Preliminary", short: "Preliminary" },
+  { key: "national_costume", label: "National Costume Round", short: "Costume" },
+  { key: "swimsuit", label: "Swimsuit Round", short: "Swimsuit" },
+  { key: "long_gown", label: "Long Gown Round", short: "Long Gown" },
+  { key: "qa", label: "Question & Answer Round", short: "Q&A" },
+  { key: "overall", label: "Overall Winner", short: "Overall" },
+  { key: "other", label: "Other", short: "Other" },
 ] as const;
 
 export const CATEGORY_LABEL: Record<string, string> = {
@@ -23,6 +28,7 @@ export const CATEGORY_LABEL: Record<string, string> = {
   winner: "Overall Winner",
   talent: "Talent",
   costume: "National Costume",
+  general: "Other",
 };
 
 // Default banner art per category (drop images in web/public/categories/ — see the README there).

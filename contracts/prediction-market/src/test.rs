@@ -144,6 +144,19 @@ fn admin_force_refund_returns_funds_to_original_staker() {
 }
 
 #[test]
+fn large_market_supports_more_than_one_hundred_options_and_constant_cost_refund() {
+    let f = setup(0);
+    let mid = f.client.create_market(&String::from_str(&f.e, "Large delegate field"), &String::from_str(&f.e, "overall"), &150, &2_000);
+    let alice = Address::generate(&f.e);
+    fund(&f, &alice, 1_000);
+    f.client.stake(&alice, &mid, &149, &175);
+    f.client.cancel_market(&mid);
+
+    assert_eq!(f.client.force_refund(&alice, &mid), 175);
+    assert_eq!(f.token.balance(&alice), 1_000);
+}
+
+#[test]
 fn unstake_cancels_position_and_refunds() {
     let f = setup(0);
     let mid = f.client.create_market(&String::from_str(&f.e, "Q"), &String::from_str(&f.e, "swimsuit"), &3, &2_000);

@@ -1,7 +1,7 @@
 # prediction-market — pageant prediction market (Soroban)
 
 Polymarket-style, **pageant-only**. Admin creates markets (e.g. "Who wins the Swimsuit
-Competition?") with N options; users stake USDC on an option; stakes are **escrowed** in the
+Competition?") with 2–256 options; users stake USDC on an option; stakes are **escrowed** in the
 contract; after the event the admin **resolves** the winner and winners **claim** a pro-rata
 share of the whole pool (minus an optional platform fee). Self-contained on `soroban-sdk`.
 
@@ -26,6 +26,7 @@ share of the whole pool (minus an optional platform fee). Self-contained on `sor
 | Platform fee → treasury | `fee_goes_to_treasury` ✓ |
 | No staking after close (anti-manipulation) | `no_stake_after_close` ✓ |
 | Cancel → refund, no double refund | `cancel_then_refund` ✓ |
+| 100+ options + bounded-cost refund | `large_market_supports_more_than_one_hundred_options_and_constant_cost_refund` ✓ |
 | Emergency pause | `pause_blocks_staking` ✓ |
 | No-winner-stake resolve rejected (no locked funds) | `resolve_with_no_winner_stake_rejected` ✓ |
 
@@ -34,7 +35,7 @@ guard, overflow-checked i128 math, typed errors, events on every state change.
 
 ## Categories
 Markets are tagged by `category` (free string) — reuse the platform categories:
-`swimsuit`, `long_gown`, `overall`, `talent`, `costume`, … Add a new category with no code change.
+`preliminary`, `national_costume`, `swimsuit`, `long_gown`, `qa`, `overall`, and `other`.
 
 ## Deploy
 See `contracts/DeploySC.md` (needs the USDC/SAC contract id + a treasury address at `initialize`).
