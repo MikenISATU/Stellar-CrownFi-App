@@ -403,11 +403,12 @@ GitHub Actions run checks that avoid requiring special repository permissions. C
 
 | Phase | When | What |
 |---|---|---|
-| **Shipped** | Now | Full testnet platform: 7 deployed contracts, anchored verifiable voting, prediction markets, NFTs, ticketing, Google/email onboarding with real wallets |
+| **Shipped** | Now | Full testnet platform: 7 deployed contracts, anchored verifiable voting, prediction markets, NFTs, Google/email onboarding with real wallets |
 | **Next** | Q3 2026 | Pilot regional pageant runs a live anchored round · GCash live via PayMongo · external contract audit + multisig admin · Stellar Community Fund application |
 | **Planned** | Q4 2026 | Staged mainnet (audit-anchor first, commerce after audit) · sponsored reserves · free-play predictions with loyalty points |
-| **Planned** | 2027 | Licensed real-money markets (PAGCOR-compliant partner) · talent shows / esports / fan awards on the same rails · self-serve organizer platform |
+| **Planned** | 2027 | Public Mainnet Launch · Brand Partnerships & Pageant Sponsorships · Self-Service Pageant & Prediction Market Organizer Platform 
 
 ## Socials
 
 **X account:** [https://x.com/CrownFi_app]
+**Facebook account:** [https://www.facebook.com/profile.php?id=61592649017590]
