@@ -17,6 +17,13 @@ const STATUSES = [
   { key: "mine", label: "My markets" },
 ];
 
+const PREDICTION_STEPS = [
+  { n: "01", t: "Pick a market", d: "Each pageant stage gets a market. The percentages are live odds — the crowd's money talking." },
+  { n: "02", t: "Stake USDC", d: "Back an outcome with test USDC. You approve every stake in your own wallet; funds sit in the contract." },
+  { n: "03", t: "Watch it move", d: "Odds shift as fans take sides. Change your mind? Cancel any position before close for a full refund." },
+  { n: "04", t: "Claim winnings", d: "When the result is resolved on-chain, winners split the whole pool. Fee is 2% of profit only." },
+];
+
 export default function PredictionsLanding() {
   const { fan } = useSession();
   const [markets, setMarkets] = useState<MarketView[] | null>(null);
@@ -24,6 +31,8 @@ export default function PredictionsLanding() {
   const [cat, setCat] = useState("all");
   const [status, setStatus] = useState("all");
   const [showCreate, setShowCreate] = useState(false);
+  const [instructionStep, setInstructionStep] = useState(0);
+  const [autoInstructions, setAutoInstructions] = useState(true);
   const [toast, setToast] = useState({ msg: "", tone: "ok" as "ok" | "err" });
   const flash = (msg: string, tone: "ok" | "err" = "ok") => { setToast({ msg, tone }); setTimeout(() => setToast({ msg: "", tone: "ok" }), 3200); };
   const openConnectChooser = () => window.dispatchEvent(new Event("crownfi:open-connect"));
@@ -37,6 +46,21 @@ export default function PredictionsLanding() {
     const iv = setInterval(() => { if (document.visibilityState === "visible") load(); }, 15000);
     return () => clearInterval(iv);
   }, [fan?.id]);
+
+  useEffect(() => {
+    if (!autoInstructions || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => {
+      if (window.matchMedia("(max-width: 639px)").matches) {
+        setInstructionStep((step) => (step + 1) % PREDICTION_STEPS.length);
+      }
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, [autoInstructions]);
+
+  const showInstruction = (index: number) => {
+    setAutoInstructions(false);
+    setInstructionStep((index + PREDICTION_STEPS.length) % PREDICTION_STEPS.length);
+  };
 
   const filtered = useMemo(() => {
     if (!markets) return [];
@@ -84,20 +108,26 @@ export default function PredictionsLanding() {
         )}
       </header>
 
-      {/* How it works — numbered walk-through, reference-style */}
-      <section className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 no-scrollbar sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
-        {[
-          { n: "01", t: "Pick a market", d: "Each pageant stage gets a market. The percentages are live odds — the crowd's money talking." },
-          { n: "02", t: "Stake USDC", d: "Back an outcome with test USDC. You approve every stake in your own wallet; funds sit in the contract." },
-          { n: "03", t: "Watch it move", d: "Odds shift as fans take sides. Change your mind? Cancel any position before close for a full refund." },
-          { n: "04", t: "Claim winnings", d: "When the result is resolved on-chain, winners split the whole pool. Fee is 2% of profit only." },
-        ].map((s) => (
-          <div key={s.n} className="card-gold w-[82vw] max-w-sm shrink-0 snap-start p-5 sm:w-auto sm:max-w-none">
-            <div className="font-display text-sm font-semibold tabular-nums text-[#a97f16]">{s.n}</div>
-            <div className="mt-1 font-display text-2xl font-semibold text-[#23252f]">{s.t}</div>
-            <p className="mt-2 text-xs leading-relaxed text-[#5f6172]">{s.d}</p>
+      {/* One auto-looping instruction at a time on mobile; all four stay visible on desktop. */}
+      <section aria-label="How prediction markets work">
+        <div className="grid sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
+          {PREDICTION_STEPS.map((step, index) => (
+            <article key={step.n} className={`card-gold min-h-44 p-5 ${index === instructionStep ? "block" : "hidden"} sm:block`}>
+              <div className="font-display text-sm font-semibold tabular-nums text-[#a97f16]">{step.n}</div>
+              <div className="mt-1 font-display text-2xl font-semibold text-[#23252f]">{step.t}</div>
+              <p className="mt-2 text-xs leading-relaxed text-[#5f6172]">{step.d}</p>
+            </article>
+          ))}
+        </div>
+        <div className="mt-3 flex items-center justify-center gap-3 sm:hidden">
+          <button type="button" onClick={() => showInstruction(instructionStep - 1)} className="btn-ghost h-10 w-10 !px-0" aria-label="Previous instruction"><Icons.Prev size={16} strokeWidth={2} /></button>
+          <div className="flex items-center gap-2" aria-label={`Instruction ${instructionStep + 1} of ${PREDICTION_STEPS.length}`}>
+            {PREDICTION_STEPS.map((step, index) => (
+              <button key={step.n} type="button" onClick={() => showInstruction(index)} aria-label={`Show instruction ${index + 1}: ${step.t}`} aria-pressed={index === instructionStep} className={`h-2 rounded-full transition-all ${index === instructionStep ? "w-6 bg-[#c8a233]" : "w-2 bg-[#d9d3c3]"}`} />
+            ))}
           </div>
-        ))}
+          <button type="button" onClick={() => showInstruction(instructionStep + 1)} className="btn-ghost h-10 w-10 !px-0" aria-label="Next instruction"><Icons.Next size={16} strokeWidth={2} /></button>
+        </div>
       </section>
 
       {showCreate && fan && <MarketForm onSaved={() => { setShowCreate(false); load(); flash("Prediction market created!"); }} onCancel={() => setShowCreate(false)} onError={(m) => flash(m, "err")} />}

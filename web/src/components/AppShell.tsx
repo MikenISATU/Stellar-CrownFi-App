@@ -182,7 +182,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-0">
-      <header className="sticky top-3 z-40 px-3 sm:top-4 sm:px-6">
+      <header className="relative z-40 px-3 sm:sticky sm:top-4 sm:px-6">
         <div className="mx-auto max-w-7xl">
           <div className="flex items-center justify-between rounded-2xl border border-[#d4af37]/55 bg-gradient-to-r from-[#3b2512]/95 via-[#6b471d]/95 to-[#3b2512]/95 px-4 py-2.5 shadow-[0_14px_34px_-18px_rgba(59,37,18,0.8)] backdrop-blur-xl sm:px-6">
             <div className="flex items-center gap-2">

@@ -10,6 +10,7 @@ type Reward = { key: string; title: string; description: string; cost: number; i
 type Loyalty = { points: number; history: { id: string; delta: number; reason: string; createdAt: string }[]; redemptions: { id: string; title: string; cost: number; code: string; status: string; createdAt: string }[] };
 
 const ICON: Record<string, any> = { x: Share2, discord: Users, linkedin: Users, share: Share2, wallet: Wallet, crown: Crown, ticket: Ticket, star: Star, image: ImageIcon, gift: Gift };
+const HISTORY_PAGE_SIZE = 8;
 function Ic({ name, className }: { name: string | null; className?: string }) {
   const C = (name && ICON[name]) || Gift;
   return <C className={className} size={18} strokeWidth={1.75} />;
@@ -29,6 +30,7 @@ export default function LoyaltyPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [shop, setShop] = useState<Reward[]>([]);
   const [busy, setBusy] = useState("");
+  const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE_SIZE);
   const [toast, setToast] = useState({ msg: "", tone: "ok" as "ok" | "err" });
 
   function flash(msg: string, tone: "ok" | "err") {
@@ -173,13 +175,22 @@ export default function LoyaltyPage() {
           <div>
             <h2 className="mb-3 tracking-tight text-xl font-semibold text-[#23252f]">Points history</h2>
             <div className="glass divide-y divide-[#eee6d3]">
-              {loyalty.history.map((h) => (
+              {loyalty.history.slice(0, historyLimit).map((h) => (
                 <div key={h.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
                   <span className="text-[#5f6172]">{reasonLabel(h.reason)}</span>
                   <span className={h.delta >= 0 ? "font-semibold text-emerald-700" : "font-semibold text-[#9f1239]"}>{h.delta >= 0 ? "+" : ""}{h.delta}</span>
                 </div>
               ))}
               {loyalty.history.length === 0 && <div className="px-4 py-4 text-sm text-[#7a7768]">No activity yet.</div>}
+              {loyalty.history.length > HISTORY_PAGE_SIZE && (
+                <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                  <span className="text-xs text-[#9a968b]">Showing {Math.min(historyLimit, loyalty.history.length)} of {loyalty.history.length}</span>
+                  <span className="flex gap-2">
+                    {historyLimit > HISTORY_PAGE_SIZE && <button type="button" onClick={() => setHistoryLimit(HISTORY_PAGE_SIZE)} className="btn-ghost !min-h-[36px] !px-3 !py-1.5 text-xs">Show less</button>}
+                    {historyLimit < loyalty.history.length && <button type="button" onClick={() => setHistoryLimit((limit) => Math.min(limit + HISTORY_PAGE_SIZE, loyalty.history.length))} className="btn-ghost !min-h-[36px] !px-3 !py-1.5 text-xs">View more</button>}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
           <div>

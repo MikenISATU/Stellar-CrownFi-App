@@ -68,7 +68,7 @@ export default function MePage() {
       </div>
 
       {/* Collections */}
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+      <div className="mt-8 grid min-w-0 gap-6 lg:grid-cols-2">
         <Panel title="Predictions" empty="No predictions yet." href="/predictions" cta="Predict now"
           rows={(data?.predictions ?? []).map((p: any) => ({ main: p.option, sub: p.question, tag: p.status, href: `/predictions/${p.marketId}` }))} />
         <Panel title="Votes" empty="You have not voted yet." href="/vote" cta="Vote now" rows={(data?.votes ?? []).map((v: any) => ({ main: v.contestant, sub: v.round, tag: v.status }))} />
@@ -117,7 +117,7 @@ export default function MePage() {
 
 function Panel({ title, rows, empty, href, cta }: { title: string; rows: { main: string; sub: string; tag: string; href?: string }[]; empty: string; href: string; cta: string }) {
   return (
-    <div className="glass p-5">
+    <div className="glass min-w-0 p-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="tracking-tight text-xl text-[#23252f]">{title}</h2>
         <span className="chip">{rows.length}</span>
@@ -140,8 +140,8 @@ function Panel({ title, rows, empty, href, cta }: { title: string; rows: { main:
               </>
             );
             return r.href
-              ? <Link key={i} href={r.href} className="block rounded-xl bg-[#faf7ef] px-3 py-2 hover:bg-[#f5efe0]">{inner}</Link>
-              : <div key={i} className="rounded-xl bg-[#faf7ef] px-3 py-2">{inner}</div>;
+              ? <Link key={i} href={r.href} className="block min-w-0 rounded-xl bg-[#faf7ef] px-3 py-2 hover:bg-[#f5efe0]">{inner}</Link>
+              : <div key={i} className="min-w-0 rounded-xl bg-[#faf7ef] px-3 py-2">{inner}</div>;
           })}
         </div>
       )}

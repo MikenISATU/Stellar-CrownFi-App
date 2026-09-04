@@ -109,13 +109,15 @@ export function SpotlightCarousel({
                       </div>
                     </div>
                   )}
-                  {isCenter && s.profileHref && (
-                    <a href={s.profileHref} onClick={(e) => e.stopPropagation()} className="mt-1.5 inline-block text-[11px] font-semibold text-[#a97f16] underline-offset-2 hover:underline">View profile</a>
-                  )}
                   {isCenter && (
-                    <span className="btn-gold mt-3 !min-h-[34px] !px-4 !py-1.5 !text-xs">
-                      {isVoted ? "Voted" : selectedId === s.id ? "Selected" : cta}
-                    </span>
+                    <div className="mt-3 flex flex-col gap-2 px-3 sm:flex-row sm:items-center sm:justify-center">
+                      {s.profileHref && (
+                        <a href={s.profileHref} onClick={(e) => e.stopPropagation()} className="btn-ghost min-h-[40px] w-full !px-4 !py-2 !text-xs sm:w-auto">View profile</a>
+                      )}
+                      <span className="btn-gold min-h-[40px] w-full !px-4 !py-2 !text-xs sm:w-auto">
+                        {isVoted ? "Voted" : selectedId === s.id ? "Selected" : cta}
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
