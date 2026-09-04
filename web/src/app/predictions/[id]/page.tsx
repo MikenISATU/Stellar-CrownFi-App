@@ -311,9 +311,9 @@ export default function MarketDetail() {
         </div>
       )}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
+      <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
         {/* ══ LEFT: the market ══════════════════════════════ */}
-        <div className="order-2 space-y-6 lg:order-1">
+        <div className="order-2 min-w-0 space-y-6 lg:order-1">
           {/* Market-says headline + chart */}
           <div className="glass p-4 sm:p-5">
             <div className="flex flex-wrap items-end justify-between gap-3">
@@ -409,7 +409,7 @@ export default function MarketDetail() {
         </div>
 
         {/* ══ RIGHT: the order card (sticky) ════════════════ */}
-        <div className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24">
+        <div className="order-1 min-w-0 space-y-4 lg:order-2 lg:sticky lg:top-24">
           <div className="card-gold p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <h2 className="tracking-tight text-lg font-semibold text-[#23252f]">Place a prediction</h2>
@@ -425,7 +425,7 @@ export default function MarketDetail() {
                 {PRIVY_ENABLED && (
                   <button type="button" onClick={openConnectChooser} className="btn-gold min-h-[52px] w-full !justify-start !px-3 text-left">
                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white ring-1 ring-[#e7e2d3]"><GoogleMark /></span>
-                    <span>
+                    <span className="min-w-0">
                       <span className="block text-sm font-semibold text-[#ffd277]">Continue with Google</span>
                       <span className="block text-xs font-normal text-[#f3e7c3]">Recommended for iPhone and mobile</span>
                     </span>
