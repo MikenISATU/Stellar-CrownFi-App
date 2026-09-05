@@ -100,6 +100,15 @@ export function WalletConnect() {
                 </span>
               </span>
             </button>
+            <a
+              href="https://help.freighter.app/article/y848tzczm2-how-do-i-connect-to-dapps"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setChooser(false)}
+              className="mx-2 mb-2 inline-flex min-h-9 items-center text-xs font-semibold text-[#8a6d1f] underline decoration-[#d4af37] underline-offset-2"
+            >
+              Freighter Mobile connection guide&nbsp;↗
+            </a>
 
             {/* Privy social login — Google is the primary passwordless path. */}
             {PRIVY_ENABLED && (

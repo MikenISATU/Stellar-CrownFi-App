@@ -32,6 +32,8 @@ Supabase is kept because the current implementation and team workflow support it
 
 ## Engineering references
 
+- [Demo Video during APAC Stellar Hackathon Philippines Demo Day](Demo_Video.md)
+- [PowerPoint during APAC Stellar Hackathon Philippines Demo Day](CrownFi_App.md)
 - [Component boundaries](architecture/component-boundaries.md)
 - [CrownFi design system](design/crownfi-design-system.md)
 - [Operations workflow](operations/workflow.md)

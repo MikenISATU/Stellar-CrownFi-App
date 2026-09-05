@@ -39,11 +39,23 @@ async function initialize() {
   }
   if (!connection) {
     connection = (async () => {
-      const [{ UniversalProvider }, { createAppKit }, { mainnet }] = await Promise.all([
+      const [{ UniversalProvider }, { createAppKit }, { defineChain }] = await Promise.all([
         import("@walletconnect/universal-provider"),
         import("@reown/appkit/core"),
         import("@reown/appkit/networks"),
       ]);
+      const stellarTestnet = defineChain({
+        id: "testnet",
+        name: "Stellar Testnet",
+        nativeCurrency: { name: "Lumens", symbol: "XLM", decimals: 7 },
+        rpcUrls: { default: { http: ["https://soroban-testnet.stellar.org"] } },
+        blockExplorers: {
+          default: { name: "Stellar Expert", url: "https://stellar.expert/explorer/testnet" },
+        },
+        testnet: true,
+        chainNamespace: "stellar",
+        caipNetworkId: STELLAR_TESTNET_CHAIN,
+      } as any);
       const provider = await UniversalProvider.init({
         projectId: PROJECT_ID,
         metadata: {
@@ -55,7 +67,7 @@ async function initialize() {
       });
       const modal = createAppKit({
         projectId: PROJECT_ID,
-        networks: [mainnet],
+        networks: [stellarTestnet as any],
         universalProvider: provider as any,
         manualWCControl: true,
       });

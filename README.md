@@ -1,6 +1,6 @@
 # CrownFi
 
-CrownFi is a hackathon/testnet MVP for pageant voting, ticketing, fan rewards, contestant support, and digital collectibles. The current mainline app is a **Next.js full-stack demo**: the UI and API routes live in `web/`, data is handled through Prisma/Postgres, and Stellar/Soroban is used for audit proofs and asset/payment primitives where configured.
+**CrownFi is a decentralized, auditable pageant-voting platform:** fans vote through wallet-bound identities, while closed tallies are committed to Stellar/Soroban with public Merkle proofs. The hackathon/testnet MVP also includes ticketing, fan rewards, contestant support, digital collectibles, and prediction markets. The current mainline app is a **Next.js full-stack demo**: the UI and API routes live in `web/`, data is handled through Prisma/Postgres, and Stellar/Soroban is used for audit proofs and asset/payment primitives where configured.
 
 > **Status:** hackathon MVP. This repository is suitable for demos, review, and iteration. It is **not** production-ready voting infrastructure, mainnet financial infrastructure, or a replacement for legal tabulation/compliance systems.
 
@@ -24,17 +24,17 @@ Beyond the mainline voting/ticketing/collectibles, this build adds:
 
 The current and legacy Soroban contracts are deployed on Stellar testnet:
 
-| Contract | Purpose | ID |
-|---|---|---|
-| Audit anchor | Seals each closed round's Merkle root (tamper-evident tallies) | `CAC7AX3PFJ5NC43BB5TRWY4QTKLSPBVK3DT5GTLH5N6Y3TIYK5GLOVNV` |
-| Ticket | Event tickets as verifiable passes (tier + seat) | `CA7M6UH55Z4UBQKBZNZBFFU3PWI3XI3BH46LMHSUINWJHTRG7CYDLH6N` |
-| Collectible | Original contestant collectible primitive (mainline) | `CAZOOO3AUNGKDE6XTQNHETSBJGU33I2OCNREZ63GTUTDRPYBUS2R4LZX` |
-| Sale splitter | On-chain USDC payment split; ticket listings **101–104** (Silver/Gold/Diamond/Platinum) registered | `CATCOIVWAVVXBNLPOXBVN3WQ26UNAVLUVSRYBNQWIII75I5QK4YV2KU3` |
-| Test USDC | Mintable demo token everything settles in (faucet source) | `CAE2GXXU4BPLRX5DHLFJKUR7AP5ETPIERGTFNCY7PEFCEL5H3G3RG6LW` |
-| Pageant NFT | Finale-build candidate NFTs: per-candidate IPFS metadata, one mint per wallet, admin-signed mint | `CCONZKTIQHR5UE4AKROICICZ2JSWDAXYBNYDCKDIMRFSIK37PND5PMQW` |
-| Prediction market V1 — legacy | Original pooled markets. Kept only for existing positions and participant-signed refunds | `CDF3R2LUIZJUXCFUBXP62F25M2BYUJT6OT3QYR46MWWBUFEXEAY25POO` |
-| Prediction market V2 — legacy | Refund-capable pooled markets retained for existing positions; supports up to 32 outcomes | `CATV2RPFRMSVMBEJSXQ4SREUOHZ45WJ2F657IQMVYH3CFKB5XZPBVVX7` |
-| Prediction market V2.1 — current | Safe admin-assisted refunds plus bounded-cost refunds and up to 256 outcomes; new markets use this contract | `CDOSOKE2MMFRZ6WR4DKASL3YQ56ALOE6S36BPVBVVOYYYIH2CHVBRBGE` |
+| Contract | Purpose | Contract Address | Deployed WASM SHA-256 |
+|---|---|---|---|
+| Audit anchor | Seals each closed round's Merkle root (tamper-evident tallies) | [`CAC7AX3PFJ5NC43BB5TRWY4QTKLSPBVK3DT5GTLH5N6Y3TIYK5GLOVNV`](https://stellar.expert/explorer/testnet/contract/CAC7AX3PFJ5NC43BB5TRWY4QTKLSPBVK3DT5GTLH5N6Y3TIYK5GLOVNV) | `1cb7a7f4fe37c10c8f6eca766255bd60ce921b95b252413769b0838b6f07c09a` |
+| Ticket | Event tickets as verifiable passes (tier + seat) | [`CA7M6UH55Z4UBQKBZNZBFFU3PWI3XI3BH46LMHSUINWJHTRG7CYDLH6N`](https://stellar.expert/explorer/testnet/contract/CA7M6UH55Z4UBQKBZNZBFFU3PWI3XI3BH46LMHSUINWJHTRG7CYDLH6N) | `25a323a750b8426295cc7bd454067437407649fe474a872fcddec38ad96a8c7e` |
+| Collectible | Original contestant collectible primitive (mainline) | [`CAZOOO3AUNGKDE6XTQNHETSBJGU33I2OCNREZ63GTUTDRPYBUS2R4LZX`](https://stellar.expert/explorer/testnet/contract/CAZOOO3AUNGKDE6XTQNHETSBJGU33I2OCNREZ63GTUTDRPYBUS2R4LZX) | `6e660960cfebe263d00405440d0e8d1c29d0a2191e250422d0bf7f97604c31fc` |
+| Sale splitter | On-chain USDC payment split; ticket listings **101–104** (Silver/Gold/Diamond/Platinum) registered | [`CATCOIVWAVVXBNLPOXBVN3WQ26UNAVLUVSRYBNQWIII75I5QK4YV2KU3`](https://stellar.expert/explorer/testnet/contract/CATCOIVWAVVXBNLPOXBVN3WQ26UNAVLUVSRYBNQWIII75I5QK4YV2KU3) | `9e311ed1866972afb4916c68c2c086d9aa0394f98eb835694196a17bccc3c9be` |
+| Test USDC | Mintable demo token everything settles in (faucet source) | [`CAE2GXXU4BPLRX5DHLFJKUR7AP5ETPIERGTFNCY7PEFCEL5H3G3RG6LW`](https://stellar.expert/explorer/testnet/contract/CAE2GXXU4BPLRX5DHLFJKUR7AP5ETPIERGTFNCY7PEFCEL5H3G3RG6LW) | `7a3d0615203f71ec3408a101e82e27a92980795729cd94874558bc854704706b` |
+| Pageant NFT | Finale-build candidate NFTs: per-candidate IPFS metadata, one mint per wallet, admin-signed mint | [`CCONZKTIQHR5UE4AKROICICZ2JSWDAXYBNYDCKDIMRFSIK37PND5PMQW`](https://stellar.expert/explorer/testnet/contract/CCONZKTIQHR5UE4AKROICICZ2JSWDAXYBNYDCKDIMRFSIK37PND5PMQW) | `73ffb3b3d48588013ddc3a77fa6a167625fd9a1135b532b57161d2a9ff4792b5` |
+| Prediction market V1 — legacy | Original pooled markets. Kept only for existing positions and participant-signed refunds | [`CDF3R2LUIZJUXCFUBXP62F25M2BYUJT6OT3QYR46MWWBUFEXEAY25POO`](https://stellar.expert/explorer/testnet/contract/CDF3R2LUIZJUXCFUBXP62F25M2BYUJT6OT3QYR46MWWBUFEXEAY25POO) | `64123ef78662a4205eaa6a2a349283a676f41796c45ad74ffd88e8411799296f` |
+| Prediction market V2 — legacy | Refund-capable pooled markets retained for existing positions; supports up to 32 outcomes | [`CATV2RPFRMSVMBEJSXQ4SREUOHZ45WJ2F657IQMVYH3CFKB5XZPBVVX7`](https://stellar.expert/explorer/testnet/contract/CATV2RPFRMSVMBEJSXQ4SREUOHZ45WJ2F657IQMVYH3CFKB5XZPBVVX7) | `5e1bfe7320f915227f3ca943f5503b0334ebbd0f1eeff736599a1cf37c9b83cd` |
+| Prediction market V2.1 — current | Safe admin-assisted refunds plus bounded-cost refunds and up to 256 outcomes; new markets use this contract | [`CDOSOKE2MMFRZ6WR4DKASL3YQ56ALOE6S36BPVBVVOYYYIH2CHVBRBGE`](https://stellar.expert/explorer/testnet/contract/CDOSOKE2MMFRZ6WR4DKASL3YQ56ALOE6S36BPVBVVOYYYIH2CHVBRBGE) | `bd82b338fb0c37ce3318fc844f431f83048b26ff1fe933bc7ded9cf2991b2468` |
 
 The prediction **treasury** (fee recipient) is a regular wallet, not a contract: `GC3PXGAWQWHHV6M6AKR3LSZZ7RNYZXASGNJM7BSU3EMWI5KG2R5QSIY3`.
 
@@ -116,7 +116,7 @@ Important framing:
 - Sign in through wallet-signed admin challenge flow.
 - Create/manage contestants and rounds.
 - Close rounds and generate tally snapshots.
-- Anchor voting proofs in mock mode or Stellar/Soroban live mode when contract IDs are configured.
+- Anchor voting proofs in mock mode or Stellar/Soroban live mode when contract addresses are configured.
 - Review organizer/admin-facing dashboard data.
 
 ### Voting/proof flow
@@ -237,9 +237,9 @@ Generate a strong admin session secret with:
 openssl rand -base64 32
 ```
 
-### Stellar contract IDs
+### Stellar contract addresses
 
-When using `STELLAR_MODE=live`, set deployed Soroban contract IDs:
+When using `STELLAR_MODE=live`, set the deployed Soroban contract addresses:
 
 | Variable | Purpose |
 |---|---|
@@ -348,7 +348,7 @@ Known limitations:
 
 - payment and mint are not fully atomic yet;
 - in-memory challenges, sessions, rate limits, and transaction intents are demo/server-singleton only;
-- contract IDs and live-mode configuration need final testnet validation before presenting live Stellar flows;
+- contract addresses and live-mode configuration need final testnet validation before presenting live Stellar flows;
 - a deeper external review is required before any mainnet, real-money, or real voter-data usage.
 
 See [`SECURITY.md`](SECURITY.md) and [`docs/security/security-audit.md`](docs/security/security-audit.md).
@@ -383,7 +383,7 @@ cargo audit --deny warnings
 
 GitHub Actions run checks that avoid requiring special repository permissions. CodeQL is best-effort because this repository may not have GitHub Code Scanning/GitHub Advanced Security enabled.
 
-## Useful docs
+## Documents
 
 | Document | Purpose |
 |---|---|
@@ -398,15 +398,8 @@ GitHub Actions run checks that avoid requiring special repository permissions. C
 | [`docs/blockchain/transaction-verification.md`](docs/blockchain/transaction-verification.md) | How transaction/proof verification should be presented |
 | [`docs/setup/supabase.md`](docs/setup/supabase.md) | Supabase/Postgres setup |
 | [`docs/security/security-audit.md`](docs/security/security-audit.md) | Security audit notes and remaining risks |
-
-## Roadmap
-
-| Phase | When | What |
-|---|---|---|
-| **Shipped** | Now | Full testnet platform: 7 deployed contracts, anchored verifiable voting, prediction markets, NFTs, Google/email onboarding with real wallets |
-| **Next** | Q3 2026 | Pilot regional pageant runs a live anchored round · GCash live via PayMongo · external contract audit + multisig admin · Stellar Community Fund application |
-| **Planned** | Q4 2026 | Staged mainnet (audit-anchor first, commerce after audit) · sponsored reserves · free-play predictions with loyalty points |
-| **Planned** | 2027 | Public Mainnet Launch · Brand Partnerships & Pageant Sponsorships · Self-Service Pageant & Prediction Market Organizer Platform 
+| [`docs/Demo_Video.md`](docs/Demo_Video.md) | [Demo Video during APAC Stellar Hackathon Philippines Demo Day](https://drive.google.com/file/d/1cQg_A3z8SKjJl4RmwQfB4E1wbiS7Fdga/view?usp=sharing) |
+| [`docs/CrownFi_App.md`](docs/CrownFi_App.md) | [PowerPoint during APAC Stellar Hackathon Philippines Demo Day](https://docs.google.com/presentation/d/13B9m5Ia69DGWrhuGkcB9RIACTkOcZg1b/edit?usp=sharing&ouid=104634317933002201977&rtpof=true&sd=true) |
 
 ## Socials
 

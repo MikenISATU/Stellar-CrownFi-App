@@ -9,7 +9,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://auth.privy.io https://*.privy.io https://*.privy.systems https://*.walletconnect.com https://*.walletconnect.org https://*.reown.com wss://*.walletconnect.com wss://*.walletconnect.org wss://*.reown.com",
+  "connect-src 'self' https://auth.privy.io https://*.privy.io https://*.privy.systems https://api.web3modal.org https://*.walletconnect.com https://*.walletconnect.org https://*.reown.com wss://*.walletconnect.com wss://*.walletconnect.org wss://*.reown.com",
   "frame-src 'self' https://auth.privy.io https://*.privy.io https://challenges.cloudflare.com",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
