@@ -403,6 +403,6 @@ GitHub Actions run checks that avoid requiring special repository permissions. C
 
 ## Socials
 
-**X account:** [https://x.com/CrownFi_app
+**X account:** https://x.com/CrownFi_app
 
-**Facebook account:** [https://www.facebook.com/profile.php?id=61592649017590]
+**Facebook account:** https://www.facebook.com/profile.php?id=61592649017590
