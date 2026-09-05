@@ -13,8 +13,12 @@ import { GoogleMark } from "@/components/brandIcons";
 import { MarketForm } from "@/components/MarketForm";
 import { categoryImage } from "@/lib/segments";
 import { binaryOutcomeSymbol } from "@/lib/marketOptions";
+import { Icons } from "@/components/icons";
 
 const PRIVY_ENABLED = Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID);
+const OUTCOME_SEARCH_THRESHOLD = 8;
+const OUTCOME_PREVIEW_COUNT = 12;
+type OutcomeSort = "chance" | "pool" | "az";
 
 type Detail = MarketView & {
   activity: { option: number; amount: number; createdAt: string; status: string }[];
@@ -39,6 +43,10 @@ export default function MarketDetail() {
   const [showEdit, setShowEdit] = useState(false);
   const [manageAction, setManageAction] = useState<"cancel" | "delete" | null>(null);
   const [manageBusy, setManageBusy] = useState(false);
+  const [pickQuery, setPickQuery] = useState("");
+  const [poolQuery, setPoolQuery] = useState("");
+  const [poolSort, setPoolSort] = useState<OutcomeSort>("pool");
+  const [showAllOutcomes, setShowAllOutcomes] = useState(false);
   const flash = (msg: string, tone: "ok" | "err" = "ok") => { setToast({ msg, tone }); setTimeout(() => setToast({ msg: "", tone: "ok" }), 3200); };
 
   const load = useCallback(async () => {
@@ -228,6 +236,25 @@ export default function MarketDetail() {
   const grossIfWin = pick != null && amt > 0 ? (amt * (m.totalPool + amt)) / ((m.options[pick]?.pool ?? 0) + amt) : 0;
   const feeIfWin = Math.round(Math.max(0, grossIfWin - amt) * (PLATFORM_FEE_PCT / 100) * 100) / 100;
   const insufficientBalance = balance != null && amt > balance;
+  const selectedOutcome = pick == null ? null : m.options.find((option) => option.index === pick) ?? null;
+  const normalizedPickQuery = pickQuery.trim().toLocaleLowerCase();
+  const pickOptions = [...m.options]
+    .filter((option) => !normalizedPickQuery || `${option.label} ${option.flagCode ?? ""}`.toLocaleLowerCase().includes(normalizedPickQuery))
+    .sort((a, b) => Number(b.pool > 0) - Number(a.pool > 0) || b.pool - a.pool || a.label.localeCompare(b.label));
+  const availablePickOptions = pickOptions.filter((option) => option.index !== pick);
+  const normalizedPoolQuery = poolQuery.trim().toLocaleLowerCase();
+  const sortedPoolOptions = m.options.length > OUTCOME_SEARCH_THRESHOLD
+    ? [...m.options]
+      .filter((option) => !normalizedPoolQuery || `${option.label} ${option.flagCode ?? ""}`.toLocaleLowerCase().includes(normalizedPoolQuery))
+      .sort((a, b) => {
+        if (poolSort === "az") return a.label.localeCompare(b.label);
+        if (poolSort === "chance") return b.percent - a.percent || b.pool - a.pool || a.label.localeCompare(b.label);
+        return b.pool - a.pool || b.percent - a.percent || a.label.localeCompare(b.label);
+      })
+    : m.options;
+  const visiblePoolOptions = showAllOutcomes || normalizedPoolQuery
+    ? sortedPoolOptions
+    : sortedPoolOptions.slice(0, OUTCOME_PREVIEW_COUNT);
 
   return (
     <div className="space-y-6">
@@ -343,6 +370,29 @@ export default function MarketDetail() {
 
           {/* Outcomes table — the pool "book" */}
           <div>
+            {m.options.length > OUTCOME_SEARCH_THRESHOLD && (
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <label className="relative min-w-0 flex-1">
+                  <span className="sr-only">Search outcome pool</span>
+                  <Icons.Search aria-hidden size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9a968b]" />
+                  <input
+                    type="search"
+                    value={poolQuery}
+                    onChange={(event) => setPoolQuery(event.target.value)}
+                    placeholder="Search country or candidate…"
+                    className="field !py-2 !pl-9 !text-sm"
+                  />
+                </label>
+                <label>
+                  <span className="sr-only">Sort outcome pool</span>
+                  <select value={poolSort} onChange={(event) => setPoolSort(event.target.value as OutcomeSort)} className="field !w-full !py-2 !text-sm sm:!w-44">
+                    <option value="pool">Largest pool</option>
+                    <option value="chance">Highest chance</option>
+                    <option value="az">A–Z</option>
+                  </select>
+                </label>
+              </div>
+            )}
             <div className="flex items-center gap-3 px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#9a968b]">
               <span className="flex-1">Outcome</span>
               <span className="w-12 text-right">Chance</span>
@@ -350,12 +400,12 @@ export default function MarketDetail() {
               <span className="w-16 text-right">To win</span>
             </div>
             <div className="space-y-1.5">
-              {m.options.map((o) => {
+              {visiblePoolOptions.map((o) => {
                 const won = m.status === "resolved" && m.winningOption === o.index;
                 // Payout multiplier per 1 USDC if this option wins (lower share ⇒ higher multiplier).
                 const mult = o.pool > 0 ? m.totalPool / o.pool : null;
                 return (
-                  <button key={o.index} onClick={() => canPredict && setPick(o.index)} disabled={!canPredict}
+                  <button key={o.index} onClick={() => { if (canPredict) { setPick(o.index); setStakeError(""); } }} disabled={!canPredict}
                     className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${pick === o.index ? "border-[#c9a227] bg-[#faf6ea]" : won ? "border-emerald-300 bg-emerald-50/50" : "border-[#eee6d3] bg-white"} ${canPredict ? "hover:border-[#c9a227]" : ""}`}>
                     <div className="min-w-0 flex-1">
                       <span className="flex items-center gap-1.5 truncate font-medium text-[#23252f]">
@@ -373,7 +423,22 @@ export default function MarketDetail() {
                   </button>
                 );
               })}
+              {visiblePoolOptions.length === 0 && (
+                <div className="rounded-xl border border-dashed border-[#dfd5bc] bg-white px-4 py-8 text-center text-sm text-[#7a7768]">
+                  No outcomes match “{poolQuery.trim()}”.
+                </div>
+              )}
             </div>
+            {!normalizedPoolQuery && sortedPoolOptions.length > OUTCOME_PREVIEW_COUNT && (
+              <div className="mt-3 flex flex-col items-center gap-1.5">
+                <button type="button" onClick={() => setShowAllOutcomes((value) => !value)} className="btn-ghost min-h-[44px] w-full sm:w-auto">
+                  {showAllOutcomes ? `Show top ${OUTCOME_PREVIEW_COUNT}` : `View all ${sortedPoolOptions.length} outcomes`}
+                </button>
+                <span className="text-[11px] text-[#9a968b]">
+                  Showing {visiblePoolOptions.length} of {sortedPoolOptions.length}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Tabs: activity | rules & source */}
@@ -440,28 +505,78 @@ export default function MarketDetail() {
               </div>
             ) : (
               <div className="mt-4 space-y-3">
-                {/* A native select stays compact and reliable for long markets on iPhone. */}
-                <label className="block sm:hidden">
-                  <span className="mb-1.5 block text-xs font-semibold text-[#5f6172]">Choose an outcome</span>
-                  <select
-                    className="field !text-base"
-                    value={pick ?? ""}
-                    onChange={(e) => { setPick(e.target.value === "" ? null : Number(e.target.value)); setStakeError(""); }}
-                  >
-                    <option value="">Select an outcome…</option>
-                    {m.options.map((o) => <option key={o.index} value={o.index}>{binaryOutcomeSymbol(o.label) === "yes" ? "✓ · " : binaryOutcomeSymbol(o.label) === "no" ? "✕ · " : o.flagCode ? `${o.flagCode} · ` : ""}{o.label} · {o.percent}%</option>)}
-                  </select>
-                </label>
+                {m.options.length > OUTCOME_SEARCH_THRESHOLD ? (
+                  <div className="space-y-2.5">
+                    {selectedOutcome && (
+                      <div className="flex items-center gap-2 rounded-xl border border-[#c9a227] bg-[#faf6ea] px-3 py-2.5">
+                        <OutcomeMarker label={selectedOutcome.label} flagCode={selectedOutcome.flagCode} className="!h-4 !w-6" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[10px] font-semibold uppercase tracking-wider text-[#8a6d1f]">Selected outcome</span>
+                          <span className="block truncate text-sm font-semibold text-[#23252f]">{selectedOutcome.label}</span>
+                        </span>
+                        <span className="text-xs font-semibold tabular-nums text-[#8a6d1f]">{selectedOutcome.percent}%</span>
+                        <button type="button" onClick={() => { setPick(null); setStakeError(""); }} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[#7a7768] transition hover:bg-white" aria-label={`Clear ${selectedOutcome.label}`}>
+                          <Icons.X size={16} aria-hidden />
+                        </button>
+                      </div>
+                    )}
+                    <label className="relative block">
+                      <span className="sr-only">Search prediction outcomes</span>
+                      <Icons.Search aria-hidden size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9a968b]" />
+                      <input
+                        type="search"
+                        value={pickQuery}
+                        onChange={(event) => setPickQuery(event.target.value)}
+                        placeholder="Search country or candidate…"
+                        className="field !py-2.5 !pl-9 !text-base sm:!text-sm"
+                      />
+                    </label>
+                    <div className="max-h-72 space-y-1.5 overflow-y-auto overscroll-contain pr-1" aria-label="Prediction outcomes">
+                      {availablePickOptions.map((option) => (
+                        <button
+                          key={option.index}
+                          type="button"
+                          onClick={() => { setPick(option.index); setStakeError(""); }}
+                          className="flex min-h-[44px] w-full items-center gap-2 rounded-lg border border-[#e7e2d3] bg-white px-3 py-2 text-left text-xs font-semibold text-[#5f6172] transition hover:border-[#c9a227]"
+                        >
+                          <OutcomeMarker label={option.label} flagCode={option.flagCode} className="!h-3.5 !w-5" />
+                          <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                          <span className="shrink-0 tabular-nums text-[#8a6d1f]">{option.percent}%</span>
+                        </button>
+                      ))}
+                      {availablePickOptions.length === 0 && (
+                        <div className="rounded-lg border border-dashed border-[#dfd5bc] bg-white px-3 py-6 text-center text-xs text-[#7a7768]">
+                          {selectedOutcome && pickOptions.length === 1 ? "No other outcomes match." : `No outcomes match “${pickQuery.trim()}”.`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* A native select stays compact and reliable for short markets on iPhone. */}
+                    <label className="block sm:hidden">
+                      <span className="mb-1.5 block text-xs font-semibold text-[#5f6172]">Choose an outcome</span>
+                      <select
+                        className="field !text-base"
+                        value={pick ?? ""}
+                        onChange={(e) => { setPick(e.target.value === "" ? null : Number(e.target.value)); setStakeError(""); }}
+                      >
+                        <option value="">Select an outcome…</option>
+                        {m.options.map((o) => <option key={o.index} value={o.index}>{binaryOutcomeSymbol(o.label) === "yes" ? "✓ · " : binaryOutcomeSymbol(o.label) === "no" ? "✕ · " : o.flagCode ? `${o.flagCode} · ` : ""}{o.label} · {o.percent}%</option>)}
+                      </select>
+                    </label>
 
-                {/* Outcome pills on wider screens. */}
-                <div className="hidden flex-wrap gap-1.5 sm:flex">
-                  {m.options.map((o) => (
-                    <button key={o.index} onClick={() => { setPick(o.index); setStakeError(""); }}
-                      className={`flex min-h-[40px] items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${pick === o.index ? "border-[#a97f16]/50 bg-gradient-to-b from-[#e4c358] to-[#c39a2c] text-[#1a1f35]" : "border-[#e7e2d3] bg-white text-[#5f6172] hover:border-[#c9a227]"}`}>
-                      <OutcomeMarker label={o.label} flagCode={o.flagCode} className="!h-3.5 !w-5" />{o.label} <span className="tabular-nums opacity-80">{o.percent}%</span>
-                    </button>
-                  ))}
-                </div>
+                    {/* Outcome pills on wider screens. */}
+                    <div className="hidden flex-wrap gap-1.5 sm:flex">
+                      {m.options.map((o) => (
+                        <button key={o.index} onClick={() => { setPick(o.index); setStakeError(""); }}
+                          className={`flex min-h-[40px] items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${pick === o.index ? "border-[#a97f16]/50 bg-gradient-to-b from-[#e4c358] to-[#c39a2c] text-[#1a1f35]" : "border-[#e7e2d3] bg-white text-[#5f6172] hover:border-[#c9a227]"}`}>
+                          <OutcomeMarker label={o.label} flagCode={o.flagCode} className="!h-3.5 !w-5" />{o.label} <span className="tabular-nums opacity-80">{o.percent}%</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
 
                 {/* Amount */}
                 <div className="flex gap-2">
