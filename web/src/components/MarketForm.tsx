@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { BannerUpload } from "@/components/BannerUpload";
 import { Icons } from "@/components/icons";
 import { MarketCloseField } from "@/components/MarketCloseField";
 import { MarketOutcomesField } from "@/components/MarketOutcomesField";
 import { MARKET_CATEGORIES } from "@/lib/segments";
 import { messageFor } from "@/lib/messages";
+import { binaryOutcomeSymbol } from "@/lib/marketOptions";
 
 export type MarketFormValue = {
   pageantId?: string | null;
@@ -25,20 +26,50 @@ type Props = {
   onError: (message: string) => void;
 };
 
+type OutcomeType = "candidates" | "binary";
+
+function isBinaryMarket(options?: MarketFormValue["options"]): boolean {
+  if (options?.length !== 2) return false;
+  const symbols = options.map((option) => binaryOutcomeSymbol(option.label));
+  return symbols.includes("yes") && symbols.includes("no");
+}
+
 export function MarketForm({ marketId, initial, onSaved, onCancel, onError }: Props) {
   const editing = Boolean(marketId);
+  const initialIsBinary = isBinaryMarket(initial?.options);
+  const initialOptions = initial?.options.map((option) => option.label) ?? ["", ""];
+  const initialFlags = initial?.options.map((option) => option.flagCode ?? "") ?? ["", ""];
   const [question, setQuestion] = useState(initial?.question ?? "");
   const [category, setCategory] = useState(initial?.category ?? MARKET_CATEGORIES[0].key);
-  const [options, setOptions] = useState<string[]>(initial?.options.map((option) => option.label) ?? ["", ""]);
-  const [optionFlags, setOptionFlags] = useState<string[]>(initial?.options.map((option) => option.flagCode ?? "") ?? ["", ""]);
+  const [outcomeType, setOutcomeType] = useState<OutcomeType>(initialIsBinary ? "binary" : "candidates");
+  const [options, setOptions] = useState<string[]>(initialIsBinary ? ["Yes", "No"] : initialOptions);
+  const [optionFlags, setOptionFlags] = useState<string[]>(initialIsBinary ? ["", ""] : initialFlags);
   const [closeTime, setCloseTime] = useState(initial?.closeTime ?? new Date(Date.now() + 72 * 3_600_000).toISOString());
   const [bannerUrl, setBannerUrl] = useState<string | null>(initial?.bannerUrl ?? null);
   const [busy, setBusy] = useState(false);
+  const candidateDraft = useRef({
+    options: initialIsBinary ? ["", ""] : initialOptions,
+    optionFlags: initialIsBinary ? ["", ""] : initialFlags,
+  });
 
   const setOutcomes = (nextOptions: string[], nextFlags: string[]) => {
     setOptions(nextOptions);
     setOptionFlags(nextFlags);
+    candidateDraft.current = { options: nextOptions, optionFlags: nextFlags };
   };
+
+  function changeOutcomeType(nextType: OutcomeType) {
+    if (nextType === outcomeType) return;
+    if (nextType === "binary") {
+      candidateDraft.current = { options, optionFlags };
+      setOptions(["Yes", "No"]);
+      setOptionFlags(["", ""]);
+    } else {
+      setOptions(candidateDraft.current.options);
+      setOptionFlags(candidateDraft.current.optionFlags);
+    }
+    setOutcomeType(nextType);
+  }
 
   const choices = options
     .map((label, index) => ({ label: label.trim(), flagCode: optionFlags[index] ?? "" }))
@@ -105,7 +136,42 @@ export function MarketForm({ marketId, initial, onSaved, onCancel, onError }: Pr
         </select>
       </label>
 
-      <MarketOutcomesField options={options} optionFlags={optionFlags} onChange={setOutcomes} />
+      <fieldset>
+        <legend className="mb-1.5 text-xs font-semibold text-[#5f6172]">Outcome type</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            aria-pressed={outcomeType === "candidates"}
+            onClick={() => changeOutcomeType("candidates")}
+            className={`min-h-[64px] rounded-xl border px-4 py-3 text-left transition ${outcomeType === "candidates" ? "border-[#b88916] bg-[#fff8df] ring-1 ring-[#d4af37]" : "border-[#e7e2d3] bg-white hover:border-[#d9c98f]"}`}
+          >
+            <span className="block text-sm font-semibold text-[#23252f]">Candidate choices</span>
+            <span className="mt-0.5 block text-xs text-[#7a7768]">Names, countries and optional flags</span>
+          </button>
+          <button
+            type="button"
+            aria-pressed={outcomeType === "binary"}
+            onClick={() => changeOutcomeType("binary")}
+            className={`min-h-[64px] rounded-xl border px-4 py-3 text-left transition ${outcomeType === "binary" ? "border-[#b88916] bg-[#fff8df] ring-1 ring-[#d4af37]" : "border-[#e7e2d3] bg-white hover:border-[#d9c98f]"}`}
+          >
+            <span className="block text-sm font-semibold text-[#23252f]">Yes or No</span>
+            <span className="mt-0.5 block text-xs text-[#7a7768]">For questions such as “Will Miss X win?”</span>
+          </button>
+        </div>
+      </fieldset>
+
+      {outcomeType === "candidates" ? (
+        <MarketOutcomesField options={options} optionFlags={optionFlags} onChange={setOutcomes} />
+      ) : (
+        <div className="space-y-2">
+          <div className="text-xs font-semibold text-[#5f6172]">Outcomes</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="field flex min-h-[48px] items-center gap-2 !py-2 text-sm font-semibold text-emerald-700"><span className="text-base" aria-hidden>✓</span> Yes</div>
+            <div className="field flex min-h-[48px] items-center gap-2 !py-2 text-sm font-semibold text-rose-700"><span className="text-base" aria-hidden>✕</span> No</div>
+          </div>
+          <p className="text-[11px] leading-relaxed text-[#9a968b]">This market will use exactly two outcomes. Candidate uploads and country flags are not needed.</p>
+        </div>
+      )}
 
       <MarketCloseField value={closeTime} onChange={setCloseTime} />
       <BannerUpload value={bannerUrl} onUploaded={setBannerUrl} />
