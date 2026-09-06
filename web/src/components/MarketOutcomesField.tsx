@@ -95,7 +95,7 @@ export function MarketOutcomesField({ options, optionFlags, onChange }: Props) {
       <div className="text-xs font-semibold text-[#5f6172]">Outcomes <span className="font-normal text-[#9a968b]">· country / flag is optional</span></div>
       <div className="rounded-xl border border-[#e6d9ad] bg-[#fffaf0] p-3 text-xs leading-relaxed text-[#6f5a22]">
         <div className="font-semibold text-[#4f3a11]">CSV for large candidate lists</div>
-        <p className="mt-1">Use two columns in this order: <code className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px]">Name,Country</code>. Add one candidate per row; uploads support up to {MAX_MARKET_OPTIONS} candidates.</p>
+        <p className="mt-1">Use two columns in this order: <code className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px]">Country,Name</code>. Add one candidate per row; uploads support up to {MAX_MARKET_OPTIONS} candidates.</p>
         <p className="mt-1 text-[11px] text-[#8a7749]">Flags are matched locally from the country name—no API key or third-party request is needed.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <input ref={fileRef} className="sr-only" type="file" accept=".txt,.csv,text/plain,text/csv" onChange={(event) => upload(event.target.files?.[0])} />
@@ -116,9 +116,9 @@ export function MarketOutcomesField({ options, optionFlags, onChange }: Props) {
         {options.map((option, index) => (
           <div key={index} className="flex items-start gap-2">
             <span className="mt-3 w-5 shrink-0 text-right text-xs tabular-nums text-[#9a968b]">{index + 1}</span>
-            <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[minmax(0,1fr)_12rem]">
-              <input className="field min-w-0 !text-base sm:!text-sm" maxLength={120} aria-label={`Candidate or outcome name ${index + 1}`} placeholder={`Candidate or outcome ${index + 1}`} value={option} onChange={(event) => setOption(index, event.target.value)} />
+            <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[12rem_minmax(0,1fr)]">
               <CountryField code={optionFlags[index] ?? ""} outcome={option} index={index} onChange={(code) => setOptionFlag(index, code)} />
+              <input className="field min-w-0 !text-base sm:!text-sm" maxLength={120} aria-label={`Candidate or outcome name ${index + 1}`} placeholder={`Candidate or outcome ${index + 1}`} value={option} onChange={(event) => setOption(index, event.target.value)} />
             </div>
             {options.length > 2 && (
               <button type="button" onClick={() => removeOption(index)} aria-label={`Remove outcome ${index + 1}`} className="mt-1 shrink-0 rounded-lg border border-[#e7e2d3] p-2.5 text-[#9a968b] transition hover:border-[#e7d0d0] hover:text-[#9f1239]">

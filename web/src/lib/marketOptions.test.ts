@@ -3,11 +3,11 @@ import { countryCodeFor, countryCodeFromOutcomeLabel } from "./countries";
 import { MAX_MARKET_OPTIONS, parseOutcomeList } from "./marketOptions";
 
 const candidates = parseOutcomeList([
-  "Name,Country",
-  '"Alba, Jr.",Albania',
-  "Dong Yifei,China PR",
-  "Lana Jahić,Bosnia & Herzegovina",
-  "Delegate,England",
+  "Country,Name",
+  'Albania,"Alba, Jr."',
+  "China PR,Dong Yifei",
+  "Bosnia & Herzegovina,Lana Jahić",
+  "England,Delegate",
 ].join("\n"));
 
 assert.deepEqual(candidates, [
