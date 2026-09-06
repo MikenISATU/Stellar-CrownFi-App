@@ -102,14 +102,19 @@ export default function PredictionsLanding() {
             </div>
           )}
         </div>
-        {fan ? (
-          <button className="btn-gold w-full sm:w-auto" onClick={() => setShowCreate((s) => !s)}>{showCreate ? "Close" : "Create a prediction"}</button>
-        ) : (
-          <button className="btn-ghost w-full sm:w-auto" onClick={openConnectChooser}>Sign in to create</button>
-        )}
       </header>
 
-      <PredictionTestnetNotice />
+      <div className="space-y-3">
+        <PredictionTestnetNotice />
+        <div className="flex justify-end">
+          {fan ? (
+            <button className="btn-gold min-h-[52px] w-full !px-7 !text-base sm:w-auto" onClick={() => setShowCreate((s) => !s)}>{showCreate ? "Close prediction form" : "Create a prediction"}</button>
+          ) : (
+            <button className="btn-ghost min-h-[52px] w-full !px-7 !text-base sm:w-auto" onClick={openConnectChooser}>Sign in to create a prediction</button>
+          )}
+        </div>
+        {showCreate && fan && <MarketForm onSaved={() => { setShowCreate(false); load(); flash("Prediction market created!"); }} onCancel={() => setShowCreate(false)} onError={(m) => flash(m, "err")} />}
+      </div>
 
       {/* One auto-looping instruction at a time on mobile; all four stay visible on desktop. */}
       <section aria-label="How prediction markets work">
@@ -132,8 +137,6 @@ export default function PredictionsLanding() {
           <button type="button" onClick={() => showInstruction(instructionStep + 1)} className="btn-ghost h-10 w-10 !px-0" aria-label="Next instruction"><Icons.Next size={16} strokeWidth={2} /></button>
         </div>
       </section>
-
-      {showCreate && fan && <MarketForm onSaved={() => { setShowCreate(false); load(); flash("Prediction market created!"); }} onCancel={() => setShowCreate(false)} onError={(m) => flash(m, "err")} />}
 
       {/* Search + filters (sticky so they stay reachable while scrolling the grid) */}
       <div className="sticky top-2 z-20 -mx-2 space-y-3 rounded-2xl border border-[#efe4c2]/70 bg-[#fbf9f2]/85 px-3 py-3 backdrop-blur-xl sm:top-3">
