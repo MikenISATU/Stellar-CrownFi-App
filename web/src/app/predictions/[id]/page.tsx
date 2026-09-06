@@ -361,7 +361,7 @@ export default function MarketDetail() {
               </div>
             </div>
             <div className="mt-4">
-              <OddsChart series={m.series} labels={m.options.map((o) => o.label)} colors={CHART_COLORS} />
+              <OddsChart series={m.series} options={m.options.map((option) => ({ label: option.label, flagCode: option.flagCode }))} colors={CHART_COLORS} />
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
               <StatTile label="Total pool" value={`${m.totalPool.toLocaleString()} USDC`} />
