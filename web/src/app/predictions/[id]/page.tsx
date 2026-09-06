@@ -222,11 +222,14 @@ export default function MarketDetail() {
   const canPredict = m.status === "open" && m.endsInMs > 0;
   const est = pick != null && Number(amount) > 0 ? estimateReward(m, pick, Number(amount)) : 0;
 
-  // Exchange-style headline: the leading outcome's implied probability + its 24h move.
-  const leader = [...m.options].sort((a, b) => b.percent - a.percent)[0];
+  // Do not manufacture a leader for an untouched market. Equal top pools are a tie.
+  const rankedOptions = [...m.options].sort((a, b) => b.pool - a.pool || a.index - b.index);
+  const leader = m.totalPool > 0 ? rankedOptions[0] : null;
+  const tiedLeaders = leader ? rankedOptions.filter((option) => option.pool === leader.pool) : [];
+  const isTied = tiedLeaders.length > 1;
   const closeAt = m.endsInMs > 0 ? new Date(Date.now() + m.endsInMs) : null;
   let delta24: number | null = null;
-  if (leader && m.series.length >= 2) {
+  if (leader && !isTied && m.series.length >= 2) {
     const cutoff = Date.now() - 24 * 3600_000;
     const past = [...m.series].filter((s) => s.t <= cutoff).pop() ?? m.series[0];
     const pastPct = past?.pcts?.[leader.index];
@@ -350,14 +353,22 @@ export default function MarketDetail() {
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-[#9a968b]">Market says</div>
                 <div className="flex items-baseline gap-2">
-                  <span className="font-display text-5xl font-semibold tabular-nums text-[#23252f]">{leader?.percent ?? 0}%</span>
+                  <span className="font-display text-5xl font-semibold tabular-nums text-[#23252f]">{leader ? `${leader.percent}%` : "—"}</span>
                   {delta24 != null && delta24 !== 0 && (
                     <span className={`text-sm font-semibold tabular-nums ${delta24 > 0 ? "text-emerald-600" : "text-[#9f1239]"}`}>
                       {delta24 > 0 ? "+" : ""}{delta24}% 24h
                     </span>
                   )}
                 </div>
-                <div className="mt-0.5 flex items-center gap-1.5 text-xs text-[#7a7768]"><OutcomeMarker label={leader?.label ?? ""} flagCode={leader?.flagCode} className="!h-3.5 !w-5" />{leader?.label ?? "—"} implied probability</div>
+                <div className="mt-0.5 flex items-center gap-1.5 text-xs text-[#7a7768]">
+                  {!leader ? (
+                    "No predictions yet"
+                  ) : isTied ? (
+                    `${tiedLeaders.length} outcomes tied at ${leader.percent}%`
+                  ) : (
+                    <><OutcomeMarker label={leader.label} flagCode={leader.flagCode} className="!h-3.5 !w-5" />{leader.label} implied probability</>
+                  )}
+                </div>
               </div>
             </div>
             <div className="mt-4">
@@ -367,7 +378,7 @@ export default function MarketDetail() {
               <StatTile label="Total pool" value={`${m.totalPool.toLocaleString()} USDC`} />
               <StatTile label="Participants" value={String(m.participants)} />
               <StatTile label="Options" value={String(m.options.length)} />
-              <StatTile label="Leading" value={leader?.label ?? "—"} />
+              <StatTile label="Leading" value={!leader ? "—" : isTied ? "Tied" : leader.label} />
             </div>
           </div>
 
