@@ -50,6 +50,7 @@ export function WalletConnect() {
               <div className="mb-2 rounded-xl surface-soft px-3 py-2">
                 <div className="text-xs text-[#7a7768]">Connected</div>
                 <div className="mono text-[#23252f]">{short(address, 6)}</div>
+                <div className="mt-1 inline-block rounded-full bg-[#e8f5ef] px-2 py-0.5 text-[11px] font-semibold text-[#0f6e56]">Stellar Testnet</div>
                 {fan && <div className="mt-1 text-xs text-[#a97f16]">{fan.points} loyalty points</div>}
                 {isAdmin && <div className="mt-1 inline-block rounded-full bg-[#faf0d2] px-2 py-0.5 text-[11px] font-semibold text-[#8a6d1f]">Admin wallet</div>}
               </div>
@@ -96,7 +97,7 @@ export function WalletConnect() {
               <span>
                 <span className="block text-sm font-semibold text-[#23252f]">{mobile ? "Freighter Mobile" : "Freighter"}</span>
                 <span className="block text-xs text-[#7a7768]">
-                  {mobile ? (mobileFreighterConfigured() ? "Connect securely with WalletConnect" : "Mobile setup unavailable — use Google") : "Stellar browser wallet"}
+                  {mobile ? (mobileFreighterConfigured() ? "WalletConnect · Stellar Testnet" : "Mobile setup unavailable — use Google") : "Requests Stellar Testnet when signing"}
                 </span>
               </span>
             </button>
@@ -135,7 +136,7 @@ export function WalletConnect() {
             )}
 
             <div className="mx-1 mt-1 rounded-xl border border-[#eadcae] bg-[#fffaf0] px-3 py-2.5 text-xs leading-relaxed text-[#6b5410]">
-              <b>Testnet safety:</b> CrownFi never asks for a recovery phrase or private key. Review every message and transaction in your wallet before approving.{" "}
+              <b>Testnet safety:</b> CrownFi requests Stellar Testnet automatically when signing. Freighter keeps the final network approval under your control. Never share a recovery phrase or private key.{" "}
               <Link href="/security" onClick={() => setChooser(false)} className="font-semibold underline underline-offset-2">Learn more</Link>
             </div>
           </div>

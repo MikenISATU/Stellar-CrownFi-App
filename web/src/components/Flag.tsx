@@ -4,7 +4,7 @@
 // unlike emoji flags. `sash` is an ISO-2 country code (e.g. "PH"). Files in /public/flags.
 export function Flag({ sash, className = "" }: { sash?: string | null; className?: string }) {
   const cc = (sash ?? "").trim().toLowerCase();
-  if (cc.length !== 2) return null;
+  if (!/^(?:[a-z]{2}|gb-(?:eng|nir|sct|wls))$/.test(cc)) return null;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img

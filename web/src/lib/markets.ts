@@ -4,6 +4,8 @@
 // Platform fee, in basis points. Charged ONLY on winnings at claim time (the on-chain
 // contract does `fee = gross_payout * fee_bps / 10000`, never on the stake itself).
 // Keep this in sync with the contract's initialize(fee_bps=...).
+import { normalizeFlagCode } from "@/lib/countries";
+
 export const PLATFORM_FEE_BPS = Number(process.env.NEXT_PUBLIC_PLATFORM_FEE_BPS ?? "200"); // 2%
 export const PLATFORM_FEE_PCT = PLATFORM_FEE_BPS / 100; // for display, e.g. 2
 export const MAX_MARKET_OPTIONS = 256;
@@ -63,8 +65,8 @@ export function parseOptionFlags(optionFlagsJson?: string | null): (string | nul
     const values = optionFlagsJson ? JSON.parse(optionFlagsJson) : [];
     return Array.isArray(values)
       ? values.map((value) => {
-          const code = String(value ?? "").trim().toUpperCase();
-          return /^[A-Z]{2}$/.test(code) ? code : null;
+          const code = normalizeFlagCode(value);
+          return code || null;
         })
       : [];
   } catch {
@@ -80,8 +82,8 @@ export function parseMarketInput(body: any): { value: MarketInput } | { error: s
     : [];
   const rawFlags: (string | null)[] = Array.isArray(body?.optionFlags)
     ? body.optionFlags.slice(0, options.length).map((value: any) => {
-        const code = String(value ?? "").trim().toUpperCase();
-        return /^[A-Z]{2}$/.test(code) ? code : null;
+        const code = normalizeFlagCode(value);
+        return code || null;
       })
     : [];
   const closeTime = body?.closeTime ? new Date(body.closeTime) : null;

@@ -4,21 +4,110 @@ const displayNames = new Intl.DisplayNames(["en"], { type: "region" });
 
 export type CountryOption = { code: string; name: string };
 
-export const COUNTRY_OPTIONS: CountryOption[] = COUNTRY_CODES
-  .map((code) => ({ code, name: displayNames.of(code) ?? code }))
+// Pageants occasionally treat the four UK nations as separate delegations. Their
+// flag assets are already bundled with the app, so preserve those real flags rather
+// than incorrectly replacing each one with the Union Jack.
+const PAGEANT_REGION_OPTIONS: CountryOption[] = [
+  { code: "GB-ENG", name: "England" },
+  { code: "GB-NIR", name: "Northern Ireland" },
+  { code: "GB-SCT", name: "Scotland" },
+  { code: "GB-WLS", name: "Wales" },
+];
+
+export const COUNTRY_OPTIONS: CountryOption[] = [
+  ...COUNTRY_CODES.map((code) => ({ code, name: displayNames.of(code) ?? code })),
+  ...PAGEANT_REGION_OPTIONS,
+]
   .sort((a, b) => a.name.localeCompare(b.name));
 
-const CODE_BY_NAME = new Map(COUNTRY_OPTIONS.map((country) => [country.name.toLocaleLowerCase(), country.code]));
+function normalizedCountryName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+const CODE_BY_NAME = new Map(COUNTRY_OPTIONS.map((country) => [normalizedCountryName(country.name), country.code]));
+
+// Common pageant/CSV spellings that differ from Intl.DisplayNames' current names.
+// Keeping these aliases locally makes imports deterministic and avoids an API key,
+// rate limits, or a third-party request for every candidate.
+const COUNTRY_ALIASES: Record<string, string> = {
+  "bosnia herzegovina": "BA",
+  "british virgin islands": "VG",
+  "brunei darussalam": "BN",
+  "burma": "MM",
+  "cape verde": "CV",
+  "china pr": "CN",
+  "china prc": "CN",
+  "chinese taipei": "TW",
+  "congo brazzaville": "CG",
+  "congo kinshasa": "CD",
+  "czech republic": "CZ",
+  "democratic republic of congo": "CD",
+  "dr congo": "CD",
+  "east timor": "TL",
+  "ivory coast": "CI",
+  "korea": "KR",
+  "laos": "LA",
+  "macau": "MO",
+  "moldova": "MD",
+  "myanmar": "MM",
+  "palestine": "PS",
+  "republic of korea": "KR",
+  "russia": "RU",
+  "south korea": "KR",
+  "swaziland": "SZ",
+  "syria": "SY",
+  "tanzania": "TZ",
+  "the bahamas": "BS",
+  "the gambia": "GM",
+  "timor leste": "TL",
+  "trinidad tobago": "TT",
+  "turkiye": "TR",
+  "united states of america": "US",
+  "us virgin islands": "VI",
+  "usa": "US",
+  "venezuela": "VE",
+  "vietnam": "VN",
+};
+
+for (const [name, code] of Object.entries(COUNTRY_ALIASES)) {
+  CODE_BY_NAME.set(normalizedCountryName(name), code);
+}
+
+const FLAG_CODES = new Set(COUNTRY_OPTIONS.map((country) => country.code));
+
+export function normalizeFlagCode(value?: string | null): string {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  return FLAG_CODES.has(normalized) ? normalized : "";
+}
 
 export function countryName(code?: string | null): string {
-  const normalized = String(code ?? "").trim().toUpperCase();
+  const normalized = normalizeFlagCode(code);
   return COUNTRY_OPTIONS.find((country) => country.code === normalized)?.name ?? "";
 }
 
 export function countryCodeFor(value?: string | null): string {
   const normalized = String(value ?? "").trim();
   if (!normalized) return "";
-  const upper = normalized.toUpperCase();
-  if (COUNTRY_CODES.includes(upper)) return upper;
-  return CODE_BY_NAME.get(normalized.toLocaleLowerCase()) ?? "";
+  const code = normalizeFlagCode(normalized);
+  if (code) return code;
+  return CODE_BY_NAME.get(normalizedCountryName(normalized)) ?? "";
+}
+
+// Legacy markets sometimes stored "Country — Candidate" (or only the country)
+// without an explicit flag code. Infer a display-only flag so those markets render
+// correctly without rewriting their immutable/auditable market data.
+export function countryCodeFromOutcomeLabel(label?: string | null): string {
+  const normalized = String(label ?? "").trim();
+  if (!normalized) return "";
+  const exact = countryCodeFor(normalized);
+  if (exact) return exact;
+  const [countryPrefix] = normalized.split(/\s+(?:—|–|-)\s+/, 1);
+  return countryCodeFor(countryPrefix);
 }

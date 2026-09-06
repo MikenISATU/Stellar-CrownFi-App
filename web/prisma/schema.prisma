@@ -393,7 +393,7 @@ model PredictionMarket {
   category      String // swimsuit | long_gown | overall | talent | costume
   question      String
   optionsJson   String // JSON array of option labels
-  optionFlagsJson String? // optional JSON array of ISO-2 country codes aligned to optionsJson
+  optionFlagsJson String? // optional JSON array of ISO-2/UK delegation flag codes aligned to optionsJson
   status        String   @default("open") // open | closed | resolved | cancelled
   closeTime     DateTime
   winningOption Int?

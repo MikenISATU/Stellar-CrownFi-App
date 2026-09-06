@@ -6,6 +6,7 @@ import { MarketForm } from "@/components/MarketForm";
 import { MARKET_CATEGORIES } from "@/lib/segments";
 import { Toast } from "@/components/ui";
 import { Icons } from "@/components/icons";
+import { PredictionTestnetNotice } from "@/components/PredictionTestnetNotice";
 
 const CATEGORIES = ["all", ...MARKET_CATEGORIES.map((s) => s.key)];
 const STATUSES = [
@@ -107,6 +108,8 @@ export default function PredictionsLanding() {
           <button className="btn-ghost w-full sm:w-auto" onClick={openConnectChooser}>Sign in to create</button>
         )}
       </header>
+
+      <PredictionTestnetNotice />
 
       {/* One auto-looping instruction at a time on mobile; all four stay visible on desktop. */}
       <section aria-label="How prediction markets work">

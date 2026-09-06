@@ -24,7 +24,9 @@ function errMsg(e: unknown): string {
   return String(e);
 }
 
-// Prompts the user to connect. Opens the Freighter popup in one call, enforces Testnet.
+// Prompts the user to connect. Opens the Freighter popup in one call and verifies Testnet.
+// Freighter intentionally does not let websites silently change a wallet's active network;
+// every CrownFi signing request is still pinned to the Testnet passphrase below.
 // `notInstalled` lets the UI send the user to freighter.app instead of showing a dead button.
 export async function connectFreighter(): Promise<{ address?: string; error?: string; notInstalled?: boolean }> {
   if (typeof window === "undefined") return { error: "not in browser" };
@@ -54,13 +56,13 @@ export async function connectFreighter(): Promise<{ address?: string; error?: st
   try {
     const net = await getNetworkDetails();
     if (net.error || !net.networkPassphrase) {
-      return { error: "Couldn't read your Freighter network. Set it to Testnet, then reconnect." };
+      return { error: "Couldn't read your Freighter network. Choose Testnet in Freighter, then reconnect." };
     }
     if (net.networkPassphrase !== TESTNET_PASSPHRASE) {
-      return { error: "Freighter is on the wrong network. Switch it to Testnet, then reconnect." };
+      return { error: "CrownFi uses Stellar Testnet. Choose Testnet inside Freighter, then reconnect." };
     }
   } catch {
-    return { error: "Couldn't read your Freighter network. Set it to Testnet, then reconnect." };
+    return { error: "Couldn't read your Freighter network. Choose Testnet in Freighter, then reconnect." };
   }
 
   return { address: access.address };
@@ -97,7 +99,10 @@ export async function signWithFreighter(
   address: string
 ): Promise<{ signedXdr?: string; error?: string }> {
   const res = await signTransaction(xdr, { networkPassphrase: TESTNET_PASSPHRASE, address });
-  if (res.error) return { error: String(res.error) };
+  if (res.error) {
+    const message = errMsg(res.error);
+    return { error: /network/i.test(message) ? "CrownFi requested Stellar Testnet. Choose Testnet in Freighter and try again." : (message || "Transaction signing was rejected.") };
+  }
   return { signedXdr: res.signedTxXdr };
 }
 
@@ -108,7 +113,9 @@ export async function signWalletMessage(
   message: string,
   address: string
 ): Promise<{ signature?: string; error?: string }> {
-  const res = await signMessage(message, { address });
+  // Passing the network here (as well as for transaction signing) makes Freighter
+  // show a blocking Testnet request if the wallet is currently on another network.
+  const res = await signMessage(message, { address, networkPassphrase: TESTNET_PASSPHRASE });
   if (res.error) return { error: errMsg(res.error) || "Message signing was rejected." };
   if (!res.signedMessage) return { error: "No signature returned by Freighter." };
   const signature = typeof res.signedMessage === "string"

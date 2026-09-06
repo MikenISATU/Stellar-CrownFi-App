@@ -1,8 +1,8 @@
-import { countryCodeFor } from "@/lib/countries";
+import { countryCodeFor, countryCodeFromOutcomeLabel } from "@/lib/countries";
 
 export const MAX_MARKET_OPTIONS = 256;
 
-export type ParsedOutcome = { label: string; flagCode: string };
+export type ParsedOutcome = { label: string; country: string; flagCode: string };
 
 function parseDelimitedRow(line: string, delimiter: string): string[] {
   const cells: string[] = [];
@@ -45,16 +45,19 @@ export function parseOutcomeList(text: string): ParsedOutcome[] {
 
   return dataRows.map((row) => {
     if (hasHeader) {
+      const country = String(row[countryIndex] ?? "").trim();
       return {
         label: String(row[labelIndex >= 0 ? labelIndex : (countryIndex === 0 ? 1 : 0)] ?? "").trim(),
-        flagCode: countryCodeFor(row[countryIndex]),
+        country,
+        flagCode: countryCodeFor(country),
       };
     }
     const firstCountry = countryCodeFor(row[0]);
     const secondCountry = countryCodeFor(row[1]);
-    if (firstCountry && row[1]) return { label: row[1].trim(), flagCode: firstCountry };
-    if (secondCountry) return { label: row[0].trim(), flagCode: secondCountry };
-    return { label: row[0].trim(), flagCode: "" };
+    if (firstCountry && row[1]) return { label: row[1].trim(), country: row[0].trim(), flagCode: firstCountry };
+    if (secondCountry) return { label: row[0].trim(), country: row[1].trim(), flagCode: secondCountry };
+    const inferredFlag = countryCodeFromOutcomeLabel(row[0]);
+    return { label: row[0].trim(), country: inferredFlag ? row[0].split(/\s+(?:—|–|-)\s+/, 1)[0] : "", flagCode: inferredFlag };
   }).filter((outcome) => outcome.label).slice(0, MAX_MARKET_OPTIONS);
 }
 

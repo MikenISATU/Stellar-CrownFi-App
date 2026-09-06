@@ -166,7 +166,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       // Only fire on the transition, so a dismissed banner doesn't reappear every 4s.
       if (wrong && !wrongNetwork.current) {
         wrongNetwork.current = true;
-        setError("Freighter is on the wrong network. Switch it back to Testnet — signing won’t work until you do.");
+        setError("CrownFi uses Stellar Testnet. Approve Testnet inside Freighter before your next signature.");
       } else if (!wrong && wrongNetwork.current) {
         wrongNetwork.current = false;
         setError("");

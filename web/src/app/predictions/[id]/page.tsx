@@ -14,6 +14,7 @@ import { MarketForm } from "@/components/MarketForm";
 import { categoryImage } from "@/lib/segments";
 import { binaryOutcomeSymbol } from "@/lib/marketOptions";
 import { Icons } from "@/components/icons";
+import { PredictionTestnetNotice } from "@/components/PredictionTestnetNotice";
 
 const PRIVY_ENABLED = Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID);
 const OUTCOME_SEARCH_THRESHOLD = 8;
@@ -259,6 +260,8 @@ export default function MarketDetail() {
   return (
     <div className="space-y-6">
       <Link href="/predictions" className="text-sm text-[#7a7768] hover:text-[#23252f]">← All markets</Link>
+
+      <PredictionTestnetNotice />
 
       <div className="relative h-40 overflow-hidden rounded-2xl bg-gradient-to-br from-[#eacb63] via-[#d4af37] to-[#8a6420] shadow-[0_18px_42px_-28px_rgba(86,58,9,0.7)] sm:h-56">
         {/* eslint-disable-next-line @next/next/no-img-element */}
