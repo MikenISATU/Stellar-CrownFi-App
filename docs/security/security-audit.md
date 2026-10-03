@@ -5,7 +5,7 @@ Scope: `web/` Next.js API routes, wallet/session flow, package supply chain, Git
 
 ## Executive summary
 
-CrownFi is a credible hackathon MVP, but it should be presented as **testnet/demo software**, not production voting infrastructure. The architecture is directionally correct: high-volume voting is off-chain, while Stellar anchors proofs and handles ownership/payment primitives. The main risks were in web/API authorization and transaction confirmation, not in the Merkle idea itself.
+CrownFi is a credible deployed app on the stellar testnet, but it should be presented as **testnet/demo software**, not production voting infrastructure. The architecture is directionally correct: high-volume voting is off-chain, while Stellar anchors proofs and handles ownership/payment primitives. The main risks were in web/API authorization and transaction confirmation, not in the Merkle idea itself.
 
 This pass fixed several high-signal issues that a judge or reviewer could quickly notice. A follow-up review on 2026-09-03 also traced the production hostname's phishing warning to an automated blocklist synchronization entry, documented the evidence, and hardened the public deployment before requesting human review:
 
