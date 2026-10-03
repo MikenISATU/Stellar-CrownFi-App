@@ -4,7 +4,7 @@ Last updated: 2026-09-03
 
 ## Scope and ownership
 
-- Official deployment: `https://stellar-crown-fi-ap-jr77.vercel.app/`
+- Official deployment: `https://crownfi-app.vercel.app/`
 - Source repository: `https://github.com/MikenISATU/Stellar-CrownFi-App` (access-controlled at the time of review)
 - Public remediation record: `https://stellar-crown-fi-ap-jr77.vercel.app/security/remediation`
 - Application: Stellar Testnet demonstration; no mainnet or real-value assets
