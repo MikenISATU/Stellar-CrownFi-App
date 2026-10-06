@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { recordPageView } from "@/lib/pageViews";
+import { invalidate } from "@/lib/serverCache";
 import { rateLimit } from "@/lib/ratelimit";
 import { clientIp } from "@/lib/ip";
 import { validPublicPath } from "@/lib/predictionUpdates";
@@ -12,7 +13,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_page_view" }, { status: 400 });
   }
   try {
-    await db.pageView.createMany({ data: [{ id: body.id, path: body.path }], skipDuplicates: true });
+    await recordPageView(body.id);
+    invalidate("stats");
     return new NextResponse(null, { status: 204 });
   } catch {
     return new NextResponse(null, { status: 503 });

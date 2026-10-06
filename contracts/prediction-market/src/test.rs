@@ -37,48 +37,6 @@ fn fund(f: &Fixture, who: &Address, amt: i128) {
 }
 
 #[test]
-fn amendments_preserve_stakes_and_allow_new_outcomes() {
-    let f = setup(0);
-    let mid = f.client.create_market(&String::from_str(&f.e, "Winner?"), &String::from_str(&f.e, "overall"), &2, &2_000);
-    let alice = Address::generate(&f.e);
-    let bob = Address::generate(&f.e);
-    fund(&f, &alice, 1000); fund(&f, &bob, 1000);
-    f.client.stake(&alice, &mid, &0, &100);
-    f.client.amend_market(&mid, &3, &3_000);
-    assert_eq!(f.client.pool_of(&mid, &0), 100);
-    assert_eq!(f.client.market(&mid).total_pool, 100);
-    assert_eq!(f.client.market(&mid).close_time, 3_000);
-    f.e.ledger().set_timestamp(2_100);
-    f.client.stake(&bob, &mid, &2, &200);
-    f.client.amend_market(&mid, &3, &3_000); // retry changes nothing
-    f.client.cancel_market(&mid);
-    assert_eq!(f.client.refund(&alice, &mid), 100);
-    assert_eq!(f.client.refund(&bob, &mid), 200);
-}
-
-#[test]
-fn amendments_cannot_shorten_remove_or_reopen() {
-    let f = setup(0);
-    let mid = f.client.create_market(&String::from_str(&f.e, "Winner?"), &String::from_str(&f.e, "overall"), &3, &2_000);
-    assert!(f.client.try_amend_market(&mid, &2, &3_000).is_err());
-    assert!(f.client.try_amend_market(&mid, &3, &1_500).is_err());
-    assert!(f.client.try_amend_market(&mid, &257, &3_000).is_err());
-    f.e.ledger().set_timestamp(2_100);
-    assert!(f.client.try_amend_market(&mid, &4, &3_000).is_err());
-    f.client.amend_market(&mid, &3, &2_000); // identical retry after deadline is harmless
-    f.client.cancel_market(&mid);
-    assert!(f.client.try_amend_market(&mid, &3, &2_000).is_err());
-}
-
-#[test]
-fn amendments_require_admin_authorization() {
-    let f = setup(0);
-    let mid = f.client.create_market(&String::from_str(&f.e, "Winner?"), &String::from_str(&f.e, "overall"), &2, &2_000);
-    f.e.mock_auths(&[]);
-    assert!(f.client.try_amend_market(&mid, &3, &3_000).is_err());
-}
-
-#[test]
 fn full_market_flow_prorata() {
     let f = setup(0);
     let mid = f.client.create_market(&String::from_str(&f.e, "Who wins Swimsuit?"), &String::from_str(&f.e, "swimsuit"), &2, &2_000);

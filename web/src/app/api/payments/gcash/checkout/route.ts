@@ -4,12 +4,10 @@ import { requireFan } from "@/lib/fanAuth";
 import { paymentsAllowed } from "@/lib/settings";
 import { gcashConfigured, createGcashCheckout } from "@/lib/payments/gcash";
 import { canonicalAppOrigin } from "@/lib/appOrigin";
-import { GCASH_ENABLED } from "@/lib/payments";
 
 // Start a GCash (PayMongo) checkout for a collectible. Returns a hosted URL to redirect to.
 // Fulfillment (minting) happens later from the PayMongo webhook once payment clears.
 export async function POST(req: NextRequest) {
-  if (!GCASH_ENABLED) return NextResponse.json({ error: "gcash_disabled" }, { status: 503 });
   const auth = requireFan(req);
   if (auth instanceof NextResponse) return auth;
 

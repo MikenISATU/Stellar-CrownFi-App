@@ -146,25 +146,6 @@ impl PredictionMarket {
         id
     }
 
-    /// Append outcome slots and/or extend a live market. Existing indices and all
-    /// pools/positions remain untouched. A repeated identical request is idempotent.
-    pub fn amend_market(e: Env, market_id: u32, num_options: u32, close_time: u64) {
-        require_admin(&e);
-        if is_paused(&e) { panic_with_error!(&e, Error::Paused); }
-        let mut m = get_market(&e, market_id);
-        if m.status != OPEN { panic_with_error!(&e, Error::MarketClosed); }
-        if num_options == m.num_options && close_time == m.close_time { return; }
-        if e.ledger().timestamp() >= m.close_time { panic_with_error!(&e, Error::MarketClosed); }
-        if num_options < m.num_options || num_options > MAX_OPTIONS || close_time < m.close_time {
-            panic_with_error!(&e, Error::InvalidParams);
-        }
-        m.num_options = num_options;
-        m.close_time = close_time;
-        e.storage().persistent().set(&DataKey::Market(market_id), &m);
-        bump(&e);
-        e.events().publish((symbol_short!("amend"), market_id), (num_options, close_time));
-    }
-
     /// Stake `amount` USDC on `option` of `market_id`. Escrows the USDC in this contract.
     pub fn stake(e: Env, from: Address, market_id: u32, option: u32, amount: i128) {
         from.require_auth();

@@ -385,7 +385,7 @@ GitHub Actions run checks that avoid requiring special repository permissions. C
 
 ## Documents
 
-- [October 2026 prediction updates and rollout](docs/features/prediction-updates-october-2026.md) — personal rankings, page views, tags, live homepage preview and GCash disablement. Database migration is required. On-chain append/extend needs a **new V3 deployment** and `PREDICTION_MARKET_CONTRACT_ID_V3`; V1/V2 markets remain on their original contracts. No V3 Contract Address or deployment transaction exists in this change.
+- [October 2026 UI correction](docs/features/prediction-updates-october-2026.md) — device-only drag rankings, independent platform totals, page views using existing storage, and the live homepage preview. **No new contract, environment variable, or schema migration is required.** Existing voting, prediction, Collect and ticket contracts remain unchanged.
 
 | Document | Purpose |
 |---|---|

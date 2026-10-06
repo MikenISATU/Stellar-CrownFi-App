@@ -1,10 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { OutcomeMarker } from "@/components/OutcomeMarker";
-import { RANKING_SIZES } from "@/lib/predictionUpdates";
+import { RANKING_SIZES, readDeviceRankings } from "@/lib/predictionUpdates";
 import type { MarketView } from "@/components/MarketCard";
 
-type Saved = { size: number; options: number[]; labels: string[] };
 export function PersonalRanking({ market, fanId }: { market: MarketView; fanId?: string }) {
   const [size, setSize] = useState(3);
   const [drafts, setDrafts] = useState<Record<number, number[]>>({});
@@ -17,19 +16,16 @@ export function PersonalRanking({ market, fanId }: { market: MarketView; fanId?:
   const listRef = useRef<HTMLOListElement>(null);
   const selected = drafts[size] ?? [];
   const closed = market.status !== "open" || market.endsInMs <= 0;
+  const storageKey = `crownfi:ranking:v1:${fanId ?? "guest"}:${market.id}`;
   useEffect(() => {
     if (!fanId) return;
-    let disposed = false;
-    fetch(`/api/markets/${market.id}/ranking`, { cache: "no-store" })
-      .then(async (r) => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(({ rankings }: { rankings: Saved[] }) => {
-        if (disposed) return;
-        const valid = rankings.filter((r) => r.options.every((index, i) => market.options[index]?.label === r.labels[i]));
-        setDrafts(Object.fromEntries(valid.map((r) => [r.size, r.options])));
-        if (valid.length !== rankings.length) setMessage("The candidate list changed. Please rebuild affected rankings.");
-      }).catch(() => { if (!disposed) { setLoadFailed(true); setMessage("Could not load your saved rankings. Refresh before editing."); } })
-      .finally(() => { if (!disposed) setLoading(false); });
-    return () => { disposed = true; };
+    try {
+      const raw = localStorage.getItem(storageKey);
+      const saved = readDeviceRankings(raw, market.options.map((o) => o.label));
+      setDrafts(Object.fromEntries(saved.map((r) => [r.size, r.options])));
+      if (raw && saved.length !== JSON.parse(raw).length) setMessage("The candidate list changed. Please rebuild affected rankings.");
+    } catch { setLoadFailed(true); setMessage("Could not read rankings on this device. Enable browser storage and refresh before editing."); }
+    finally { setLoading(false); }
   }, [market.id, fanId]); // Component is keyed by account and candidate list in the parent.
   function update(next: number[]) { setDrafts((prev) => ({ ...prev, [size]: next })); setMessage("Unsaved ranking"); }
   function move(index: number, to: number) {
@@ -37,19 +33,20 @@ export function PersonalRanking({ market, fanId }: { market: MarketView; fanId?:
     if (from < 0 || to < 0 || to >= selected.length || from === to) return;
     const next = [...selected]; next.splice(from, 1); next.splice(to, 0, index); update(next);
   }
-  async function save() {
+  function save() {
     setBusy(true);
     try {
-      const r = await fetch(`/api/markets/${market.id}/ranking`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ size, options: selected, labels: selected.map((i) => market.options[i].label) }) });
-      setMessage(r.ok ? `Top ${size} saved to your account.` : "Could not save. Check that this market is still open and refresh if its candidates changed.");
-    } catch { setMessage("Connection interrupted. Your draft is still here; try saving again."); }
+      const saved = readDeviceRankings(localStorage.getItem(storageKey), market.options.map((o) => o.label));
+      localStorage.setItem(storageKey, JSON.stringify([...saved.filter((r) => r.size !== size), { size, options: selected, labels: selected.map((i) => market.options[i].label) }]));
+      setMessage(`Top ${size} saved on this device. No stake was placed.`);
+    } catch { setMessage("Could not save in this browser. Your draft is still here; check that browser storage is enabled."); }
     finally { setBusy(false); }
   }
   const available = market.options.filter((o) => !selected.includes(o.index) && o.label.toLowerCase().includes(query.trim().toLowerCase()));
   const disabled = loading || loadFailed || busy || closed;
   return (
     <section className="glass min-w-0 space-y-4 p-4 sm:p-5" aria-label="Personal ranking">
-      <div><h2 className="text-xl font-semibold">My predicted finalists</h2><p className="mt-1 text-sm text-[#7a7768]">Build your personal Top 20, 10, 5 or 3. These saved picks do not place a stake or earn a payout.</p></div>
+      <div><h2 className="text-xl font-semibold">My predicted finalists</h2><p className="mt-1 text-sm text-[#7a7768]">Build your personal Top 20, 10, 5 or 3. Saved only in this browser on this device—not synced across devices. These picks do not place a stake or earn a payout.</p></div>
       <div className="flex flex-wrap gap-2">{RANKING_SIZES.map((n) => <button key={n} type="button" disabled={busy || loading || loadFailed || market.options.length < n} aria-pressed={size === n} onClick={() => { setSize(n); setMessage(""); }} className={`min-h-11 rounded-lg border px-4 text-sm disabled:opacity-40 ${size === n ? "border-[#b8912f] bg-[#fff4d1]" : "border-[#e7e2d3]"}`}>Top {n}</button>)}</div>
       <p className="text-xs text-[#7a7768]">{selected.length}/{size} selected. Drag the grip to reorder, or use the arrow buttons.</p>
       <ol ref={listRef} className="max-h-[28rem] space-y-2 overflow-y-auto rounded-xl border border-[#eee6d3] p-2">

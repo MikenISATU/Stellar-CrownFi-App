@@ -8,7 +8,7 @@ import type { MarketView } from "@/components/MarketCard";
 import { getJson } from "@/lib/api";
 import { LiveMarketPreview } from "@/components/LiveMarketPreview";
 
-type Stats = { votes: number; collectiblesSold: number; fans: number; predictions: number; pageViews: number };
+type Stats = { votes: number; collectiblesSold: number; fans: number; predictions: number; pageViews: number | null };
 
 export default function Home() {
   const [slides, setSlides] = useState<Slide[]>([]);
@@ -25,6 +25,7 @@ export default function Home() {
   useEffect(() => {
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") fetch("/api/markets", { cache: "no-store" }).then((r) => r.json()).then((data) => { if (Array.isArray(data)) setMarkets(data); }).catch(() => {});
+      if (document.visibilityState === "visible") getJson<Stats | null>("/api/stats", null).then(setStats);
     }, 30_000);
     return () => clearInterval(timer);
   }, []);
@@ -150,20 +151,20 @@ export default function Home() {
           <div className="grid grid-cols-2 gap-x-4 gap-y-10 text-center lg:grid-cols-5">
             {[
               { label: "Page views", value: stats?.pageViews ?? null },
-              { label: "Users registered", value: stats?.fans ?? 0 },
-              { label: "Votes cast", value: stats?.votes ?? 0 },
-              { label: "Predictions made", value: stats?.predictions ?? 0 },
-              { label: "NFTs collected", value: stats?.collectiblesSold ?? 0 },
+              { label: "Users registered", value: stats?.fans ?? null },
+              { label: "Votes cast", value: stats?.votes ?? null },
+              { label: "Predictions made", value: stats?.predictions ?? null },
+              { label: "NFTs collected", value: stats?.collectiblesSold ?? null },
             ].map((s) => (
               <div key={s.label}>
                 <div className="font-display text-5xl font-semibold tabular-nums text-[#23252f] sm:text-6xl">
-                  {s.value == null ? "—" : <><CountUp to={s.value} /><span className="text-[#c8a233]">+</span></>}
+                  {s.value == null ? <span title="Count currently unavailable">—</span> : <CountUp to={s.value} />}
                 </div>
                 <div className="mt-2 text-sm text-[#7a7768]">{s.label}</div>
               </div>
             ))}
           </div>
-          <p className="mt-6 text-center text-xs text-[#7a7768]">Page views count public-page visits, including repeat visits, from when tracking was enabled.</p>
+          <p className="mt-6 text-center text-xs text-[#7a7768]">Page views count public-page visits, including repeat visits, from when tracking was enabled. A dash means a count is loading or unavailable—not zero.</p>
         </div>
       </section>
 

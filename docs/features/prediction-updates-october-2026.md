@@ -1,31 +1,24 @@
-# October 2026 prediction updates
+# October 2026 UI correction
 
-These updates apply to the Stellar application. No Base/Solana integration or video recording is included.
+The correction keeps the requested homepage/UI improvements and personal drag rankings. It removes the V3 amendment work and new-schema requirements from the previous update.
 
-## Included changes
+## What stays
 
-- Homepage voting/prediction actions and the requested platform introduction.
-- A vertical, fixed-height preview of actual open, unexpired markets. It refreshes every 30 seconds, supports manual scrolling and pause/resume, and respects reduced-motion preferences. No example markets are inserted into the database.
-- Public page-view counts (not unique visitors). Counting starts with this release; there is no historical backfill. Repeat visits count; duplicate delivery of the same event does not. The tracker stores only event ID, public path and timestamp, excludes private/admin pages and ignores common bot user agents. Counts are approximate, not bot-proof analytics.
-- Personal Top 20/10/5/3 rankings saved per signed-in account and market. Candidate search, touch/mouse drag grips and arrow controls support reordering. These are personal picks, not escrowed bets or ranked payouts. Rankings lock when a market closes; changed candidate labels require affected rankings to be rebuilt.
-- One category/stage plus up to eight tags, including custom tags. The market list supports tag filtering.
-- Creators/admins can append outcomes and extend the close time on compatible open markets. Existing outcome labels, flags, order and stakes remain unchanged. On-chain changes are authorized by the configured contract admin after the application verifies creator/admin ownership.
-- New GCash checkout is disabled, its footer logo is removed, and GCash providers cannot be selected. The webhook remains available to reconcile payments initiated before the change.
+- Homepage introduction, voting/prediction buttons and preview of actual live Stellar markets.
+- Personal Top 20/10/5/3 rankings with search, drag grips and arrow controls. Saves are **local to this browser/device**, separated by signed-in account and market. They do not sync across devices, create USDC positions, affect voting, or earn payouts. Clearing browser storage removes them.
+- Real platform totals and public page views. Missing/loading data displays a dash, not fabricated zero totals. A visit-counter failure cannot break the other counters. Homepage counts refresh every 30 seconds.
+- GCash footer-logo removal only. Existing payment configuration, purchase flows and deployed smart-contract routing remain unchanged.
 
-## Required rollout (not performed by the code change)
+## No contract deployment or schema migration
 
-1. Back up the database and apply the included migration from `web` with `npx prisma migrate deploy`. It adds tags, a pending-amendment journal, personal rankings and page-view storage. Apply it before serving the updated application.
-2. Run `npm run check`, `npm run build` in `web`, and `cargo test -p prediction-market` in `contracts`.
-3. For on-chain amendments, deploy and initialize the new prediction-market contract using the existing deployment procedure. Record its real Contract Address and deployment transaction hash after deployment; none are invented here.
-4. Set the server-side Vercel variable `PREDICTION_MARKET_CONTRACT_ID_V3` to that new `C...` Contract Address, then redeploy. Do not use a WASM hash or an old V1/V2 address. Keep the old variables for historical markets. The app prefers V3 for new markets and retains each existing market's recorded contract reference.
-5. Verify a new testnet market end-to-end: stake, append an option, extend its deadline, stake on the appended option, and settle or cancel/refund. Local tests do not replace this deployed-wallet check.
+Do **not** deploy V3 or change the existing prediction contract variables for this UI update. The contract source, Prisma schema, market management and payment code are restored to their pre-update versions. The unused amendment endpoints and pending migration were removed. No production database or deployed contract was altered during this correction.
 
-Existing contracts have no upgrade entry point. Their markets cannot gain amendment support by changing an environment variable, and existing escrow is not migrated. They remain readable/settleable on their original contract. Database-only mock markets can be amended without a chain deployment.
+If the previous migration was independently applied, do not drop tables or run a destructive schema sync. Extra unused columns/tables can remain; this version does not depend on them.
 
-## Interrupted amendments
+## Page visits
 
-The API locks the market and persists the intended option list/deadline before submission. An uncertain chain response or database confirmation leaves it in `amending`, blocks other management changes/staking, and exposes a retry action to its creator/admin. Retrying submits the same idempotent contract operation. Do not manually reset a pending market without checking its on-chain state. A permanently rejected amendment (for example, expiry before submission) requires administrator reconciliation; it must not silently overwrite chain-backed terms.
+The tracker is enabled in the root layout. Public route visits, including repeat visits, send anonymous events; admin/account/organizer-dashboard pages are excluded. Common bots are skipped and requests are rate-limited. Counts start when the corrected tracker successfully records visits; no historical total is invented.
 
-## Verification limits
+The counter uses a separate `analytics:page-views:v1` metadata row in the **existing** `PlatformSettings` table. Payment configuration remains in `singleton` and is never changed by analytics. One parameterized atomic upsert increments the total across server instances. Only the total and 128 recent random event IDs are retained to suppress ordinary duplicate deliveries. No wallet address, IP, pathname history or user identity is stored. This is approximate traffic counting, not bot-proof analytics or unique-visitor counting.
 
-Automated route tests use in-memory database fixtures; they do not migrate a database, send payments or submit chain transactions. Browser fixture checks verify component interactions and layout, not wallet authorization or deployed settlement. Contract unit tests run in the Soroban test environment. Production migration and testnet smoke tests remain rollout steps.
+Deploy the web update normally. There is no new environment variable and no migration command for this correction. Confirm `/api/stats` returns the existing platform totals and `/api/page-views` records visits after deployment; a site visit should increase the count within the cache/refresh interval.

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSettings } from "@/lib/settings";
-import { getProviderMeta, GCASH_ENABLED } from "@/lib/payments";
+import { getProviderMeta } from "@/lib/payments";
 
 // Public (non-sensitive) view of the active payment method, so the buy UI can adapt — e.g. show
 // a "Pay with GCash" option when the admin has enabled GCash as the active provider.
@@ -13,7 +13,7 @@ export async function GET() {
       maintenance: s.maintenanceMode,
       provider: s.activeProvider,
       label: meta.label,
-      gcash: GCASH_ENABLED && !!meta.capabilities.gcash,
+      gcash: !!meta.capabilities.gcash, // active provider offers GCash checkout
       environment: s.environment, // testnet | production
     });
   } catch {

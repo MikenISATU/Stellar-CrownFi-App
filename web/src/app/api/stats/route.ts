@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { readJson } from "@/lib/http";
 import { cached } from "@/lib/serverCache";
+import { getPageViewCount } from "@/lib/pageViews";
 
 // Aggregate counts across five tables — the most expensive read in the app, hit on every
 // home visit. Nothing here needs to be fresher than a few seconds.
@@ -14,7 +15,8 @@ export async function GET() {
     db.votingRound.count(),
     db.fan.count(),
     db.prediction.count(),
-    db.pageView.count(),
+    // Optional telemetry must never take down the original platform totals.
+    getPageViewCount().catch(() => null),
   ]);
 
   const ticketRows = await db.ticket.findMany({ select: { priceUsdc: true } });

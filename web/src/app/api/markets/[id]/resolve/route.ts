@@ -29,20 +29,16 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ error: "admin_auth_required" }, { status: 403 });
   }
 
-  if (["editing", "amending", "deleting", "cancelling", "closing", "resolving"].includes(market.status)) return NextResponse.json({ error: "market_changed" }, { status: 409 });
-
   const onchain = marketConfigured() && market.chainMarketId != null;
   const cid = market.chainMarketId as number;
   const contractId = onchain ? predictionMarketContractId(market.createTxHash) : undefined;
 
   if (action === "close") {
     if (market.status !== "open") return NextResponse.json({ error: "not_open" }, { status: 409 });
-    const lock = await db.predictionMarket.updateMany({ where: { id, status: "open" }, data: { status: "closing" } });
-    if (!lock.count) return NextResponse.json({ error: "market_changed" }, { status: 409 });
     let resolveTxHash: string | undefined;
     if (onchain) {
       try { resolveTxHash = (await closeMarketOnchain({ contractId, marketId: cid })).txHash; }
-      catch (e) { await db.predictionMarket.updateMany({ where: { id, status: "closing" }, data: { status: "open" } }); console.error("[markets/resolve] close on-chain failed:", e); return NextResponse.json({ error: "onchain_failed" }, { status: 502 }); }
+      catch (e) { console.error("[markets/resolve] close on-chain failed:", e); return NextResponse.json({ error: "onchain_failed" }, { status: 502 }); }
     }
     const m = await db.predictionMarket.update({ where: { id }, data: { status: "closed", resolveTxHash } });
     return NextResponse.json(m);
@@ -81,13 +77,11 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
     const winnersExist = market.predictions.some((p) => p.option === winningOption);
     if (!winnersExist) return NextResponse.json({ error: "no_winning_stake" }, { status: 409 });
-    const lock = await db.predictionMarket.updateMany({ where: { id, status: market.status }, data: { status: "resolving" } });
-    if (!lock.count) return NextResponse.json({ error: "market_changed" }, { status: 409 });
 
     let resolveTxHash: string | undefined;
     if (onchain) {
       try { resolveTxHash = (await resolveMarketOnchain({ contractId, marketId: cid, winningOption })).txHash; }
-      catch (e) { await db.predictionMarket.updateMany({ where: { id, status: "resolving" }, data: { status: market.status } }); console.error("[markets/resolve] resolve on-chain failed:", e); return NextResponse.json({ error: "onchain_failed" }, { status: 502 }); }
+      catch (e) { console.error("[markets/resolve] resolve on-chain failed:", e); return NextResponse.json({ error: "onchain_failed" }, { status: 502 }); }
     }
 
     await db.$transaction([

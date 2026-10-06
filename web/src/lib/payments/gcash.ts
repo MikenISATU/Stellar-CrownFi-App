@@ -6,11 +6,10 @@
 //   → PayMongo POSTs a webhook (checkout_session.payment.paid) to /api/payments/paymongo/webhook
 //   → we verify + fulfill (mint / issue ticket).
 
-import { GCASH_ENABLED } from "@/lib/payments";
 const PAYMONGO_BASE = "https://api.paymongo.com/v1";
 
 export function gcashConfigured(): boolean {
-  return GCASH_ENABLED && Boolean(process.env.PAYMONGO_SECRET_KEY);
+  return Boolean(process.env.PAYMONGO_SECRET_KEY);
 }
 
 // USD→PHP for display/charge. GCash settles in PHP; the catalog is priced in USDC (≈USD).
@@ -28,7 +27,6 @@ export async function createGcashCheckout(input: {
   successUrl: string;
   cancelUrl: string;
 }): Promise<GcashCheckout> {
-  if (!GCASH_ENABLED) throw new Error("gcash_disabled");
   const key = process.env.PAYMONGO_SECRET_KEY;
   if (!key) throw new Error("gcash_not_configured");
 

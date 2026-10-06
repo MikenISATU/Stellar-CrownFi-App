@@ -5,7 +5,6 @@
 // contract does `fee = gross_payout * fee_bps / 10000`, never on the stake itself).
 // Keep this in sync with the contract's initialize(fee_bps=...).
 import { normalizeFlagCode } from "@/lib/countries";
-import { parseMarketTags } from "@/lib/predictionUpdates";
 
 export const PLATFORM_FEE_BPS = Number(process.env.NEXT_PUBLIC_PLATFORM_FEE_BPS ?? "200"); // 2%
 export const PLATFORM_FEE_PCT = PLATFORM_FEE_BPS / 100; // for display, e.g. 2
@@ -13,7 +12,6 @@ export const MAX_MARKET_OPTIONS = 256;
 
 export type MarketOptionView = { index: number; label: string; flagCode: string | null; pool: number; percent: number };
 export type MarketInput = {
-  tags: string[];
   question: string;
   category: string;
   options: string[];
@@ -23,7 +21,6 @@ export type MarketInput = {
   bannerUrl: string | null;
 };
 export type MarketView = {
-  tags: string[];
   id: string;
   pageantId: string | null;
   category: string;
@@ -41,7 +38,6 @@ export type MarketView = {
 };
 
 type MarketRow = {
-  tags?: string[];
   id: string;
   pageantId: string | null;
   creatorFanId?: string | null;
@@ -79,8 +75,6 @@ export function parseOptionFlags(optionFlagsJson?: string | null): (string | nul
 }
 
 export function parseMarketInput(body: any): { value: MarketInput } | { error: string } {
-  const tags = parseMarketTags(body?.tags);
-  if (!tags) return { error: "invalid_market_tags" };
   const question = String(body?.question ?? "").trim().slice(0, 300);
   const category = String(body?.category ?? "").trim().slice(0, 40);
   const options: string[] = Array.isArray(body?.options)
@@ -101,7 +95,6 @@ export function parseMarketInput(body: any): { value: MarketInput } | { error: s
 
   return {
     value: {
-      tags,
       question,
       category,
       options,
@@ -138,7 +131,6 @@ export function computeMarketView(
   const endsInMs = m.closeTime.getTime() - now;
   return {
     id: m.id,
-    tags: m.tags ?? [],
     pageantId: m.pageantId,
     category: m.category,
     question: m.question,

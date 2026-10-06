@@ -6,9 +6,6 @@ import { OutcomeMarker } from "@/components/OutcomeMarker";
 export { CATEGORY_LABEL };
 
 export type MarketView = {
-  tags?: string[];
-  canAmend?: boolean;
-  amendmentPending?: boolean;
   id: string; pageantId: string | null; category: string; question: string; status: string; live: boolean; official: boolean;
   isCreator: boolean; canManage: boolean; canEdit: boolean; hasPositions: boolean;
   closeTime: string; endsInMs: number; winningOption: number | null; bannerUrl: string | null;
@@ -17,7 +14,6 @@ export type MarketView = {
 };
 
 export function statusBadge(m: MarketView): { label: string; cls: string } {
-  if (["amending", "editing", "closing", "resolving", "cancelling", "deleting"].includes(m.status)) return { label: "Updating", cls: "bg-[#faf0d2] text-[#8a6d1f]" };
   if (m.status === "resolved") return { label: "Resolved", cls: "bg-[#e1f5ee] text-[#0f6e56]" };
   if (m.status === "cancelled") return { label: "Cancelled", cls: "bg-[#fbe9ef] text-[#9f1239]" };
   if (m.live) return { label: "Live", cls: "bg-[#fdeaea] text-[#c0392b]" };
@@ -66,7 +62,6 @@ export function MarketCard({ m }: { m: MarketView }) {
 
       <div className="flex flex-1 flex-col p-4">
         <div className="line-clamp-2 min-h-[2.6rem] font-display text-lg leading-snug text-[#23252f]">{m.question}</div>
-        {!!m.tags?.length && <div className="mt-2 flex flex-wrap gap-1">{m.tags.map((tag) => <span key={tag} className="rounded-full bg-[#faf0d2] px-2 py-1 text-xs text-[#8a6d1f]">#{tag}</span>)}</div>}
 
         {resolvedWin ? (
           <div className="mt-3 flex flex-1 items-center gap-2 rounded-xl bg-[#f2fbf7] px-3 py-2.5 text-sm text-[#0f6e56]">

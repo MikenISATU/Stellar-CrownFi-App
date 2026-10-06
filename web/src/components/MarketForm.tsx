@@ -8,10 +8,8 @@ import { MarketOutcomesField } from "@/components/MarketOutcomesField";
 import { MARKET_CATEGORIES } from "@/lib/segments";
 import { messageFor } from "@/lib/messages";
 import { binaryOutcomeSymbol } from "@/lib/marketOptions";
-import { MarketTagsField } from "@/components/MarketTagsField";
 
 export type MarketFormValue = {
-  tags?: string[];
   pageantId?: string | null;
   question: string;
   category: string;
@@ -43,7 +41,6 @@ export function MarketForm({ marketId, initial, onSaved, onCancel, onError }: Pr
   const initialFlags = initial?.options.map((option) => option.flagCode ?? "") ?? ["", ""];
   const [question, setQuestion] = useState(initial?.question ?? "");
   const [category, setCategory] = useState(initial?.category ?? MARKET_CATEGORIES[0].key);
-  const [tags, setTags] = useState(initial?.tags ?? []);
   const [outcomeType, setOutcomeType] = useState<OutcomeType>(initialIsBinary ? "binary" : "candidates");
   const [options, setOptions] = useState<string[]>(initialIsBinary ? ["Yes", "No"] : initialOptions);
   const [optionFlags, setOptionFlags] = useState<string[]>(initialIsBinary ? ["", ""] : initialFlags);
@@ -97,7 +94,6 @@ export function MarketForm({ marketId, initial, onSaved, onCancel, onError }: Pr
         body: JSON.stringify({
           question: question.trim(),
           category,
-          tags,
           options: choices.map((choice) => choice.label),
           optionFlags: choices.map((choice) => choice.flagCode),
           closeTime,
@@ -139,8 +135,6 @@ export function MarketForm({ marketId, initial, onSaved, onCancel, onError }: Pr
           {MARKET_CATEGORIES.map((segment) => <option key={segment.key} value={segment.key}>{segment.label}</option>)}
         </select>
       </label>
-
-      <MarketTagsField value={tags} onChange={setTags} />
 
       <fieldset>
         <legend className="mb-1.5 text-xs font-semibold text-[#5f6172]">Outcome type</legend>
