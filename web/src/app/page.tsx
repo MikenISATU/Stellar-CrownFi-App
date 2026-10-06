@@ -164,7 +164,6 @@ export default function Home() {
               </div>
             ))}
           </div>
-          <p className="mt-6 text-center text-xs text-[#7a7768]">Page views count public-page visits, including repeat visits, from when tracking was enabled. A dash means a count is loading or unavailable—not zero.</p>
         </div>
       </section>
 
