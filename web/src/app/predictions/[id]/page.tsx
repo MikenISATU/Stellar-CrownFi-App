@@ -15,6 +15,8 @@ import { categoryImage } from "@/lib/segments";
 import { binaryOutcomeSymbol } from "@/lib/marketOptions";
 import { Icons } from "@/components/icons";
 import { PredictionTestnetNotice } from "@/components/PredictionTestnetNotice";
+import { PersonalRanking } from "@/components/PersonalRanking";
+import { MarketAmendForm } from "@/components/MarketAmendForm";
 
 const PRIVY_ENABLED = Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID);
 const OUTCOME_SEARCH_THRESHOLD = 8;
@@ -42,6 +44,7 @@ export default function MarketDetail() {
   const [toast, setToast] = useState({ msg: "", tone: "ok" as "ok" | "err" });
   const [tab, setTab] = useState<"activity" | "rules">("activity");
   const [showEdit, setShowEdit] = useState(false);
+  const [showAmend, setShowAmend] = useState(false);
   const [manageAction, setManageAction] = useState<"cancel" | "delete" | null>(null);
   const [manageBusy, setManageBusy] = useState(false);
   const [pickQuery, setPickQuery] = useState("");
@@ -287,6 +290,7 @@ export default function MarketDetail() {
           <span className={`rounded-full px-2.5 py-0.5 font-semibold ${badge.cls}`}>{badge.label}</span>
         </div>
         <h1 className="mt-3 text-balance text-3xl font-semibold leading-tight tracking-tight text-[#23252f] sm:text-4xl">{m.question}</h1>
+        {!!m.tags?.length && <div className="mt-2 flex flex-wrap gap-2">{m.tags.map((tag) => <span key={tag} className="rounded-full bg-[#faf0d2] px-3 py-1 text-xs text-[#8a6d1f]">#{tag}</span>)}</div>}
         {closeAt && m.status === "open" && (
           <div className="mt-2 text-xs leading-relaxed text-[#7a7768]">
             Closes {closeAt.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} local
@@ -296,8 +300,9 @@ export default function MarketDetail() {
         {m.canManage && (
           <div className="mt-4">
             <div className="flex flex-wrap gap-2">
+              {m.canAmend && <button type="button" className="btn-ghost min-h-11" onClick={() => { setShowAmend((v) => !v); setShowEdit(false); }}>{showAmend ? "Close update form" : "Add outcomes / extend deadline"}</button>}
               {m.canEdit && (
-                <button type="button" onClick={() => { setShowEdit((value) => !value); setManageAction(null); }} className="btn-ghost min-h-[44px] flex-1 sm:flex-none">
+                  <button type="button" onClick={() => { setShowEdit((value) => !value); setShowAmend(false); setManageAction(null); }} className="btn-ghost min-h-[44px] flex-1 sm:flex-none">
                   {showEdit ? "Close editor" : "Edit market"}
                 </button>
               )}
@@ -312,7 +317,7 @@ export default function MarketDetail() {
                 </button>
               )}
             </div>
-            {m.hasPositions && ["open", "closed"].includes(m.status) && <p className="mt-2 text-xs text-[#7a7768]">Market terms are locked after the first position. You can cancel the market, but it must remain visible for refunds and audit history.</p>}
+            {m.hasPositions && ["open", "closed"].includes(m.status) && <p className="mt-2 text-xs text-[#7a7768]">Existing outcomes and stakes are preserved. {m.canAmend ? "You can append outcomes or extend the deadline while this market is live." : "This market cannot be extended here; older contracts do not support live updates."}</p>}
           </div>
         )}
       </div>
@@ -320,12 +325,15 @@ export default function MarketDetail() {
       {showEdit && m.canEdit && (
         <MarketForm
           marketId={m.id}
-          initial={{ pageantId: m.pageantId, question: m.question, category: m.category, options: m.options, closeTime: m.closeTime, bannerUrl: m.bannerUrl }}
+          initial={{ pageantId: m.pageantId, question: m.question, category: m.category, tags: m.tags, options: m.options, closeTime: m.closeTime, bannerUrl: m.bannerUrl }}
           onSaved={() => { setShowEdit(false); flash("Market updated on-chain."); load(); }}
           onCancel={() => setShowEdit(false)}
           onError={(message) => { flash(message, "err"); load(); }}
         />
       )}
+
+      {showAmend && m.canAmend && <MarketAmendForm market={m} onCancel={() => setShowAmend(false)} onSaved={() => { setShowAmend(false); load(); }} />}
+      {m.amendmentPending && <div className="card-gold space-y-2 p-4"><p className="text-sm">Your market update is awaiting confirmation. New positions are paused until it is confirmed.</p><button type="button" disabled={manageBusy} className="btn-ghost min-h-11" onClick={async () => { setManageBusy(true); try { const r = await fetch(`/api/markets/${m.id}/amend`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ retry: true }) }); if (!r.ok) flash("Update is still pending. Please try again shortly.", "err"); await load(); } catch { flash("Connection interrupted.", "err"); } finally { setManageBusy(false); } }}>Retry confirmation</button></div>}
 
       {manageAction && (
         <div role="dialog" aria-modal="true" aria-labelledby="manage-market-title" className="rounded-2xl border border-[#e7c3c8] bg-[#fff8f7] p-4 sm:p-5">
@@ -343,6 +351,8 @@ export default function MarketDetail() {
           </div>
         </div>
       )}
+
+      {m.options.length >= 3 && <details className="min-w-0"><summary className="cursor-pointer rounded-xl border border-[#d9c98f] bg-[#fff8df] px-4 py-4 font-semibold">Build my Top 20 / 10 / 5 / 3</summary><div className="mt-3"><PersonalRanking key={`${m.id}:${fan?.id ?? "guest"}:${JSON.stringify(m.options.map((o) => o.label))}`} market={m} fanId={fan?.id} /></div></details>}
 
       <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
         {/* ══ LEFT: the market ══════════════════════════════ */}

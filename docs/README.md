@@ -19,6 +19,7 @@ This folder is the documentation home for the CrownFi hackathon MVP. The project
 - [Admin and organizer flows](features/admin.md)
 - [Collectibles and contestant support](features/collectibles.md)
 - [Stellar/Soroban integration](blockchain/stellar-soroban.md)
+- [October prediction updates and rollout](features/prediction-updates-october-2026.md)
 - [Transaction verification notes](blockchain/transaction-verification.md)
 
 ## Setup and deployment

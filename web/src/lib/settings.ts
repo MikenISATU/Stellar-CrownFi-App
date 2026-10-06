@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { GCASH_ENABLED, getProviderMeta } from "@/lib/payments";
 
 // Platform settings singleton (payments + KYC + environment). Read anywhere; edited by admin.
 
@@ -36,6 +37,7 @@ export async function getSettings(): Promise<Settings> {
     const found = await db.platformSettings.findUnique({ where: { id: "singleton" } });
     const s = found ?? (await db.platformSettings.create({ data: { id: "singleton" } }));
     const val = s as unknown as Settings;
+    if (!GCASH_ENABLED && getProviderMeta(val.activeProvider).capabilities.gcash) val.activeProvider = "testnet_usdc";
     cache = { at: Date.now(), val };
     return val;
   } catch {
@@ -55,6 +57,7 @@ export async function paymentsAllowed(): Promise<{ ok: true } | { ok: false; rea
 const EDITABLE = ["paymentsEnabled", "kycEnabled", "kycMandatory", "environment", "activeProvider", "maintenanceMode", "winnersAnnounced", "providerConfig"] as const;
 
 export async function updateSettings(patch: Record<string, any>): Promise<Settings> {
+  if (!GCASH_ENABLED && typeof patch.activeProvider === "string" && getProviderMeta(patch.activeProvider).capabilities.gcash) throw new Error("gcash_disabled");
   const data: Record<string, any> = {};
   for (const k of EDITABLE) if (k in patch) data[k] = patch[k];
   if ("environment" in data && !["testnet", "production"].includes(data.environment)) delete data.environment;

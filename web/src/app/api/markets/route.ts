@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const where: any = {};
   if (sp.get("category")) where.category = sp.get("category");
+  if (sp.get("tag")) where.tags = { has: sp.get("tag") };
   if (sp.get("status")) where.status = sp.get("status");
   if (sp.get("pageantId")) where.pageantId = sp.get("pageantId");
   const q = sp.get("q")?.trim();
@@ -50,13 +51,14 @@ export async function POST(req: NextRequest) {
   const b = await req.json().catch(() => null);
   const parsed = parseMarketInput(b);
   if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
-  const { question, category, options, optionFlags, closeTime, pageantId, bannerUrl } = parsed.value;
+  const { question, category, tags, options, optionFlags, closeTime, pageantId, bannerUrl } = parsed.value;
 
   try {
     let market = await db.predictionMarket.create({
       data: {
         question,
         category,
+        tags,
         optionsJson: JSON.stringify(options),
         optionFlagsJson: optionFlags.some(Boolean) ? JSON.stringify(options.map((_, i) => optionFlags[i] ?? null)) : null,
         closeTime,

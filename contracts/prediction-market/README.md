@@ -16,6 +16,7 @@ share of the whole pool (minus an optional platform fee). Self-contained on `sor
 - `claim(from, market_id)` → `stake × total_pool ÷ winning_pool − fee` (double-claim guarded)
 - `cancel_market` + `refund(from, market_id)` — full refunds for voided markets
 - `force_refund(user, market_id)` — admin-triggered refund after cancellation; escrow goes only to the original staker
+- `amend_market(market_id, num_options, close_time)` — V3: admin-authorized, open markets only; append option slots and/or extend the deadline without modifying existing stakes. Removal, shortening, reopening and more than 256 options are rejected.
 - admin: `pause` / `unpause` / `set_fee` / `transfer_admin`
 - views: `market`, `pool_of`, `position_of`, `has_claimed`, `market_count`, `paused`, `admin`
 
@@ -39,3 +40,5 @@ Markets are tagged by `category` (free string) — reuse the platform categories
 
 ## Deploy
 See `contracts/DeploySC.md` (needs the USDC/SAC contract id + a treasury address at `initialize`).
+
+The V3 source is not automatically deployed by a web release. Deploy and initialize a **new** contract, then set `PREDICTION_MARKET_CONTRACT_ID_V3` to its Contract Address. Existing V1/V2 markets stay bound to their original contract and cannot use `amend_market`. See [rollout notes](../../docs/features/prediction-updates-october-2026.md).

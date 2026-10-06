@@ -308,6 +308,7 @@ const PREDICTION_V2_TESTNET_ID = "CDOSOKE2MMFRZ6WR4DKASL3YQ56ALOE6S36BPVBVVOYYYI
 const MARKET_REF_PREFIX = "pm2:";
 
 function activePredictionContractId(): string {
+  if (process.env.PREDICTION_MARKET_CONTRACT_ID_V3) return process.env.PREDICTION_MARKET_CONTRACT_ID_V3;
   const configured = process.env.PREDICTION_MARKET_CONTRACT_ID_V2;
   if (configured) return configured;
   const network = (process.env.STELLAR_NETWORK ?? "testnet").toLowerCase();
@@ -335,10 +336,26 @@ export function supportsAdminForceRefund(createTxHash?: string | null): boolean 
 }
 
 export const marketConfigured = () => MODE === "live" && Boolean(
+  process.env.PREDICTION_MARKET_CONTRACT_ID_V3 ||
   process.env.PREDICTION_MARKET_CONTRACT_ID_V2 ||
   process.env.PREDICTION_MARKET_CONTRACT_ID ||
   PREDICTION_V2_TESTNET_ID,
 );
+
+// Only an explicitly deployed V3 supports amendments. Never reinterpret V1/V2 rows.
+export function supportsMarketAmendment(createTxHash?: string | null): boolean {
+  const configured = process.env.PREDICTION_MARKET_CONTRACT_ID_V3;
+  return Boolean(configured && createTxHash?.startsWith(`${MARKET_REF_PREFIX}${configured}:`));
+}
+
+export async function amendMarketOnchain(params: { contractId: string; marketId: number; numOptions: number; closeUnix: number }): Promise<{ txHash: string }> {
+  const { txHash } = await invoke(params.contractId, "amend_market", (sdk) => [
+    sdk.nativeToScVal(params.marketId, { type: "u32" }),
+    sdk.nativeToScVal(params.numOptions, { type: "u32" }),
+    sdk.nativeToScVal(BigInt(params.closeUnix), { type: "u64" }),
+  ]);
+  return { txHash };
+}
 
 // Admin (platform-signed): create a market on-chain; returns its u32 id.
 export async function createMarketOnchain(params: { question: string; category: string; numOptions: number; closeUnix: number }): Promise<{ marketId: number; txHash: string; contractId: string }> {

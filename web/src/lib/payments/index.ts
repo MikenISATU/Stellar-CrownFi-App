@@ -5,6 +5,8 @@
 // The fiat-onramp providers are catalogued with their capabilities and wired later behind the
 // same interface. Verify each provider's CURRENT PH/GCash + Stellar/USDC support before enabling.
 
+export const GCASH_ENABLED = false;
+
 export type PaymentCapabilities = {
   gcash: boolean;
   cards: boolean;

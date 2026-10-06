@@ -6,8 +6,9 @@ import { Filmstrip } from "@/components/Filmstrip";
 import { CountUp } from "@/components/ui";
 import type { MarketView } from "@/components/MarketCard";
 import { getJson } from "@/lib/api";
+import { LiveMarketPreview } from "@/components/LiveMarketPreview";
 
-type Stats = { votes: number; collectiblesSold: number; fans: number; predictions: number };
+type Stats = { votes: number; collectiblesSold: number; fans: number; predictions: number; pageViews: number };
 
 export default function Home() {
   const [slides, setSlides] = useState<Slide[]>([]);
@@ -21,7 +22,14 @@ export default function Home() {
     getJson<MarketView[]>("/api/markets", [], { ttl: 30_000 }).then(setMarkets);
   }, []);
 
-  // The home page only previews the markets — the numbers below, never the markets themselves.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") fetch("/api/markets", { cache: "no-store" }).then((r) => r.json()).then((data) => { if (Array.isArray(data)) setMarkets(data); }).catch(() => {});
+    }, 30_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Preview and summary use the same fetched markets.
   const liveMarkets = markets.filter((m) => m.live).length;
   const pooled = markets.reduce((sum, m) => sum + m.totalPool, 0);
   const predictors = markets.reduce((sum, m) => sum + m.participants, 0);
@@ -45,14 +53,14 @@ export default function Home() {
             CrownFi <span className="font-display italic text-[#c8a233]">App</span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-sm font-semibold uppercase tracking-[0.28em] text-[#a97f16] sm:text-base">
-            Blockchain-powered voting, tickets & predictions for pageants
+            THE FIRST-EVER BLOCKCHAIN-POWERED VOTING, TICKETING &amp; PREDICTION MARKET PLATFORM FOR PAGEANTS ON STELLAR
           </p>
           <p className="mx-auto mt-6 max-w-xl text-[#5f6172]">
-            Vote, reserve your seat, and collect your queen — all on Stellar.
+            Vote for your favorite candidates, predict the winners, secure your seats, and collect exclusive digital collectibles - all powered by the Stellar blockchain.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Link href="/vote" className="btn-ghost !px-7 !py-3 text-base">Cast your vote</Link>
-            <Link href="/tickets" className="btn-gold !px-8 !py-3 text-base">Buy Tickets</Link>
+            <Link href="/vote" className="btn-gold !px-7 !py-3 text-base">Cast Your Vote</Link>
+            <Link href="/predictions" className="btn-ghost !px-8 !py-3 text-base">Predict The Queen</Link>
           </div>
         </div>
       </section>
@@ -111,6 +119,8 @@ export default function Home() {
             <Link href="/predictions" className="btn-gold mt-7 inline-flex !px-8 !py-3 text-base">Open prediction markets</Link>
           </div>
 
+          <div className="min-w-0 space-y-4">
+          <LiveMarketPreview markets={markets} />
           <div className="grid grid-cols-3 gap-3">
             {[
               { label: "Markets live", value: liveMarkets },
@@ -122,6 +132,7 @@ export default function Home() {
                 <div className="mt-1 text-[11px] uppercase tracking-wider text-[#7a7768]">{s.label}</div>
               </div>
             ))}
+          </div>
           </div>
         </div>
       </section>
@@ -136,8 +147,9 @@ export default function Home() {
 
         {/* One clean strip: dark digits, gold accent, plain labels. */}
         <div className="card-gold px-6 py-10 sm:px-10 sm:py-12">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-10 text-center lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-10 text-center lg:grid-cols-5">
             {[
+              { label: "Page views", value: stats?.pageViews ?? null },
               { label: "Users registered", value: stats?.fans ?? 0 },
               { label: "Votes cast", value: stats?.votes ?? 0 },
               { label: "Predictions made", value: stats?.predictions ?? 0 },
@@ -145,12 +157,13 @@ export default function Home() {
             ].map((s) => (
               <div key={s.label}>
                 <div className="font-display text-5xl font-semibold tabular-nums text-[#23252f] sm:text-6xl">
-                  <CountUp to={s.value} /><span className="text-[#c8a233]">+</span>
+                  {s.value == null ? "—" : <><CountUp to={s.value} /><span className="text-[#c8a233]">+</span></>}
                 </div>
                 <div className="mt-2 text-sm text-[#7a7768]">{s.label}</div>
               </div>
             ))}
           </div>
+          <p className="mt-6 text-center text-xs text-[#7a7768]">Page views count public-page visits, including repeat visits, from when tracking was enabled.</p>
         </div>
       </section>
 

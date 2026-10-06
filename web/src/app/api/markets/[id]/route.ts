@@ -11,6 +11,7 @@ import {
   marketConfigured,
   predictionMarketContractId,
   supportsAdminForceRefund,
+  supportsMarketAmendment,
 } from "@/lib/stellar";
 import { rateLimit } from "@/lib/ratelimit";
 import { clientIp } from "@/lib/ip";
@@ -50,7 +51,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       series = series.filter((_, i) => i % step === 0 || i === series.length - 1);
     }
 
-    return NextResponse.json({ ...view, activity, mine, series, isCreator, canManage, canEdit: canManage && m.status === "open" && !hasPositions, hasPositions });
+    return NextResponse.json({ ...view, activity, mine, series, isCreator, canManage, canEdit: canManage && m.status === "open" && !hasPositions,
+      canAmend: canManage && m.status === "open" && m.closeTime.getTime() > Date.now() && (m.chainMarketId == null || (marketConfigured() && supportsMarketAmendment(m.createTxHash))),
+      amendmentPending: canManage && m.status === "amending" && Boolean(m.amendmentJson), hasPositions });
   } catch {
     return NextResponse.json({ error: "server_error" }, { status: 500 });
   }
@@ -114,6 +117,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
         data: {
           question: input.question,
           category: input.category,
+          tags: input.tags,
           optionsJson: JSON.stringify(input.options),
           optionFlagsJson: input.optionFlags.some(Boolean) ? JSON.stringify(input.optionFlags) : null,
           closeTime: input.closeTime,
@@ -133,6 +137,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       data: {
         question: input.question,
         category: input.category,
+        tags: input.tags,
         optionsJson: JSON.stringify(input.options),
         optionFlagsJson: input.optionFlags.some(Boolean) ? JSON.stringify(input.optionFlags) : null,
         closeTime: input.closeTime,
@@ -173,7 +178,7 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
     });
     if (!market) return NextResponse.json({ error: "not_found" }, { status: 404 });
     if (!admin && market.creatorFanId !== fan?.fanId) return NextResponse.json({ error: "not_market_creator" }, { status: 403 });
-    if (["deleting", "cancelling"].includes(market.status)) {
+    if (["deleting", "cancelling", "editing", "amending", "closing", "resolving"].includes(market.status)) {
       return NextResponse.json({ error: "market_changed" }, { status: 409 });
     }
     if (market.predictions.length > 0 && !force) {

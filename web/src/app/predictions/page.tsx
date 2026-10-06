@@ -30,6 +30,7 @@ export default function PredictionsLanding() {
   const [markets, setMarkets] = useState<MarketView[] | null>(null);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
+  const [tag, setTag] = useState("");
   const [status, setStatus] = useState("all");
   const [showCreate, setShowCreate] = useState(false);
   const [instructionStep, setInstructionStep] = useState(0);
@@ -67,6 +68,7 @@ export default function PredictionsLanding() {
     if (!markets) return [];
     return markets.filter((m) => {
       if (cat !== "all" && m.category !== cat) return false;
+      if (tag && !m.tags?.includes(tag)) return false;
       if (status === "live" && !m.live) return false;
       if (status === "upcoming" && !(m.status === "open" && !m.live)) return false;
       if (status === "previous" && !(m.status === "closed" || m.status === "resolved" || (m.status === "open" && !m.live))) return false;
@@ -75,10 +77,11 @@ export default function PredictionsLanding() {
       if (q && !m.question.toLowerCase().includes(q.toLowerCase())) return false;
       return true;
     });
-  }, [markets, cat, status, q]);
+  }, [markets, cat, tag, status, q]);
 
   const live = filtered.filter((m) => m.live).sort((a, b) => (b.official ? 1 : 0) - (a.official ? 1 : 0));
-  const defaultView = status === "all" && cat === "all" && !q;
+  const defaultView = status === "all" && cat === "all" && !q && !tag;
+  const tags = [...new Set(markets?.flatMap((m) => m.tags ?? []) ?? [])].sort();
   const sectionMarkets = defaultView ? filtered.filter((m) => !m.live) : filtered;
 
   return (
@@ -139,6 +142,7 @@ export default function PredictionsLanding() {
       </section>
 
       {/* Search + filters (sticky so they stay reachable while scrolling the grid) */}
+      {tags.length > 0 && <label className="block text-sm text-[#5f6172]">Filter by tag<select className="field mt-1 !text-base" value={tag} onChange={(e) => setTag(e.target.value)}><option value="">All tags</option>{tags.map((t) => <option key={t} value={t}>#{t}</option>)}</select></label>}
       <div className="sticky top-2 z-20 -mx-2 space-y-3 rounded-2xl border border-[#efe4c2]/70 bg-[#fbf9f2]/85 px-3 py-3 backdrop-blur-xl sm:top-3">
         <div className="relative">
           <Icons.Search size={16} strokeWidth={2} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9a968b]" />
@@ -206,7 +210,7 @@ export default function PredictionsLanding() {
                 <>
                   <div className="font-display text-xl text-[#23252f]">No markets match your filters</div>
                   <p className="mt-2 text-sm text-[#7a7768]">Try a different category or clear your search.</p>
-                  <button onClick={() => { setQ(""); setCat("all"); setStatus("all"); }} className="btn-ghost mt-4">Clear filters</button>
+                  <button onClick={() => { setQ(""); setCat("all"); setTag(""); setStatus("all"); }} className="btn-ghost mt-4">Clear filters</button>
                 </>
               ) : (
                 <>

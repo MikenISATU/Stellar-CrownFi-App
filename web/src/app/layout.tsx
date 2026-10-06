@@ -4,6 +4,7 @@ import { Playfair_Display, Inter } from "next/font/google";
 import { SessionProvider } from "@/session/SessionProvider";
 import { PrivyWrapper } from "@/session/PrivyWrapper";
 import { AppShell } from "@/components/AppShell";
+import { PageViewTracker } from "@/components/PageViewTracker";
 
 // Typography: Playfair Display for headlines/numbers (the fashion-editorial serif the gold
 // design wants), Inter for body/UI (crisp at small sizes). Self-hosted via next/font — no
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning className={`${display.variable} ${inter.variable}`}>
       <body className="font-sans antialiased">
+        <PageViewTracker />
         <PrivyWrapper>
           <SessionProvider>
             <AppShell>{children}</AppShell>

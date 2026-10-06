@@ -6,7 +6,7 @@ import { cached } from "@/lib/serverCache";
 // home visit. Nothing here needs to be fresher than a few seconds.
 export async function GET() {
   return readJson(() => cached("stats", 15_000, async () => {
-  const [votes, tickets, purchases, contestants, rounds, fans, predictions] = await Promise.all([
+  const [votes, tickets, purchases, contestants, rounds, fans, predictions, pageViews] = await Promise.all([
     db.vote.count(),
     db.ticket.count(),
     db.purchase.findMany({ select: { priceUsdc: true } }),
@@ -14,6 +14,7 @@ export async function GET() {
     db.votingRound.count(),
     db.fan.count(),
     db.prediction.count(),
+    db.pageView.count(),
   ]);
 
   const ticketRows = await db.ticket.findMany({ select: { priceUsdc: true } });
@@ -36,6 +37,7 @@ export async function GET() {
     .slice(0, 8);
 
   return {
+    pageViews,
     votes,
     tickets,
     collectiblesSold: purchases.length,

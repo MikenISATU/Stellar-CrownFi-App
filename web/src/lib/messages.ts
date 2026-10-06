@@ -98,6 +98,11 @@ export const ERROR_MESSAGES: Record<string, string> = {
   // ── Generic / infra ──
   rate_limited: "You’re doing that too quickly — please wait a moment and try again.",
   payments_disabled: "Payments are currently turned off. Please check back soon.",
+  gcash_disabled: "GCash payments are temporarily unavailable.",
+  invalid_market_tags: "Choose up to 8 tags, each with no more than 24 characters.",
+  market_amendment_unsupported: "This market uses an older contract that cannot add outcomes or extend its deadline.",
+  market_append_extend_only: "Keep every existing outcome and flag unchanged, and choose the same or a later deadline.",
+  market_amendment_pending: "Your market update is awaiting confirmation. Refresh and retry confirmation.",
   gcash_not_configured: "GCash isn’t connected yet. Add your PayMongo merchant keys to enable it.",
   maintenance: "CrownFi is under maintenance right now. Paid actions are paused — please try again shortly.",
   missing_fields: "Some required details are missing. Please check the form and try again.",

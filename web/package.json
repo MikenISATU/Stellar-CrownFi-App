@@ -14,8 +14,9 @@
     "test:ticketing": "tsx src/lib/ticketing.test.ts",
     "test:security": "tsx src/lib/security.test.ts",
     "test:market-options": "tsx src/lib/marketOptions.test.ts",
+    "test:prediction-updates": "tsx src/lib/predictionUpdates.test.ts",
     "typecheck": "prisma generate && tsc --noEmit",
-    "check": "npm run typecheck && npm run test:merkle && npm run test:security && npm run test:market-options",
+    "check": "npm run typecheck && npm run test:merkle && npm run test:security && npm run test:market-options && npm run test:prediction-updates",
     "security:audit": "npm audit --audit-level=moderate"
   },
   "dependencies": {

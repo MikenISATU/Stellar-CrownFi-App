@@ -391,6 +391,9 @@ model PredictionMarket {
   pageantId     String? // optional link to a Pageant
   creatorFanId  String? // null = official (admin/platform); set = community/user-created
   category      String // swimsuit | long_gown | overall | talent | costume
+  tags          String[] @default([])
+  amendmentJson String? // durable pending append/extension; retry after an uncertain chain response
+  amendTxHash   String?
   question      String
   optionsJson   String // JSON array of option labels
   optionFlagsJson String? // optional JSON array of ISO-2/UK delegation flag codes aligned to optionsJson
@@ -404,10 +407,32 @@ model PredictionMarket {
   createdAt     DateTime @default(now())
 
   predictions Prediction[]
+  rankings PersonalRanking[]
 
   @@index([status])
   @@index([category])
   @@index([creatorFanId])
+}
+
+// Personal picks only: no USDC position or payout is attached to this list.
+model PersonalRanking {
+  id String @id @default(cuid())
+  marketId String
+  market PredictionMarket @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  fanId String
+  size Int
+  options Int[]
+  labels String[]
+  updatedAt DateTime @updatedAt
+  @@unique([marketId, fanId, size])
+}
+
+// Anonymous page-load events. No wallet, IP, query string or browser identifier is stored.
+model PageView {
+  id String @id
+  path String
+  createdAt DateTime @default(now())
+  @@index([createdAt])
 }
 
 model Prediction {

@@ -107,10 +107,6 @@ function SiteFooter() {
         </div>
 
         <div className="mt-12 flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-[#e6c65a]/20 pt-6 text-xs text-[#ddcca3]">
-          <span className="inline-flex items-center gap-2">We accept
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <span className="inline-flex items-center rounded-md bg-white px-2 py-1"><img src="/brand/gcash.svg" alt="GCash" className="h-5 w-auto" /></span>
-          </span>
           <span className="rounded-full bg-black/10 px-2.5 py-1 text-[11px] ring-1 ring-[#e6c65a]/20">Built on Stellar</span>
           <span className="ml-auto text-[#c7b487]">Crown your queen, on-chain.</span>
         </div>
