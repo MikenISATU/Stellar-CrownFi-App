@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Icons } from "./icons";
 import type { Slide } from "./Carousel";
 
 /**
@@ -82,10 +81,6 @@ export function Filmstrip({ slides }: { slides: Slide[] }) {
         })}
       </ul>
 
-      <div className="flex items-center justify-center gap-3">
-        <button onClick={goPrev} className="btn-ghost h-9 w-9 !px-0" aria-label="Previous delegate"><Icons.Prev size={16} strokeWidth={2} /></button>
-        <button onClick={goNext} className="btn-ghost h-9 w-9 !px-0" aria-label="Next delegate"><Icons.Next size={16} strokeWidth={2} /></button>
-      </div>
     </div>
   );
 }
